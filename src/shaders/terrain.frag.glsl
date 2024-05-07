@@ -7,6 +7,14 @@ varying vec3 v2f_normal;
 varying vec3 v2f_dir_from_view;
 varying vec3 v2f_dir_to_light;
 
+varying float dist_to_view;
+
+uniform float zoom;
+
+uniform vec3 fog_color;
+uniform vec2 closeFarThreshold;
+uniform vec2 minMaxIntensity;
+uniform bool useFog;
 
 const vec3  light_color = vec3(1.0, 0.941, 0.898);
 // Small perturbation to prevent "z-fighting" on the water on some machines...
@@ -56,6 +64,11 @@ void main()
 	vec3 specular = pow(max(dot(vertex_normal_view, h), 0.0), shininess) * light_color * material_color;
 
 	vec3 color = clamp(ambient + diffuse + specular, 0.0, 1.0);
+
+	if (useFog){
+		float fogFactor = clamp(pow(dist_to_view - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), minMaxIntensity.x, minMaxIntensity.y);
+		color = mix(color, fog_color, fogFactor);
+	}
 
 	gl_FragColor = vec4(color, 1.); // output: RGBA in 0..1 range
 }

@@ -8,6 +8,8 @@ varying vec3 v2f_normal;
 varying vec3 v2f_dir_from_view;
 varying vec3 v2f_dir_to_light;
 
+varying float dist_to_view;
+
 uniform mat4 mat_mvp;
 uniform mat4 mat_model_view;
 uniform mat3 mat_normals; // mat3 not 4, because normals are only rotated and not translated
@@ -36,5 +38,8 @@ void main()
 	v2f_dir_from_view = normalize(-vertex_position_view.xyz);
 	//Basic geometry to get the vector going from vertex to light
 	v2f_dir_to_light = normalize(light_position - vertex_position_view).xyz;
+
+	dist_to_view = length(vertex_position_view.xyz);
+
 	gl_Position = mat_mvp * position_v4;
 }

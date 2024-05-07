@@ -299,4 +299,95 @@ vec3 tex_marble(vec2 point) {
 	return mix(white, brown_dark, alpha);
 }
 
+// ==============================================================
+// 3D perlin noise
+vec3 gradient_3d(int i) {
+	if (i ==  0) return vec3( 1,  1,  0);
+	if (i ==  1) return vec3(-1,  1,  0);
+	if (i ==  2) return vec3( 1, -1,  0);
+	if (i ==  3) return vec3(-1, -1,  0);
+	if (i ==  4) return vec3( 1,  0,  1);
+	if (i ==  5) return vec3(-1,  0,  1);
+	if (i ==  6) return vec3( 1,  0, -1);
+	if (i ==  7) return vec3(-1,  0, -1);
+	if (i ==  8) return vec3( 0,  1,  1);
+	if (i ==  9) return vec3( 0, -1,  1);
+	if (i == 10) return vec3( 0,  1, -1);
+	if (i == 11) return vec3( 0, -1, -1);
+	return vec3(0, 0, 0);
+}
 
+int hash_func_3d(vec3 grid_point) {
+	return int(mod(hash_poly(hash_poly(hash_poly(grid_point.x) + grid_point.y) + grid_point.z), float(NUM_GRADIENTS)));
+}
+
+float perlin_noise(vec3 point) {
+	vec3 vertices[8];
+
+	vertices[0] = floor(point);
+	vertices[1] = vertices[0] + vec3(1., 0., 0.);
+	vertices[2] = vertices[0] + vec3(0., 1., 0.);
+	vertices[3] = vertices[0] + vec3(0., 0., 1.);
+	vertices[4] = vertices[0] + vec3(1., 1., 0.);
+	vertices[5] = vertices[0] + vec3(1., 0., 1.);
+	vertices[6] = vertices[0] + vec3(0., 1., 1.);
+	vertices[7] = vertices[0] + vec3(1., 1., 1.);
+
+	vec3 gradients[8];
+
+	for(int i = 0; i < 8; i++) {
+		gradients[i] = gradient_3d(hash_func_3d(vertices[i]));
+	}
+
+	vec3 distances[8];
+
+	for(int i = 0; i < 8; i++) {
+		distances[i] = point - vertices[i];
+	}
+	
+	float dot_products[8];
+
+	for(int i = 0; i < 8; i++) {
+		dot_products[i] = dot(gradients[i], distances[i]);
+	}
+
+	float ab = mix(dot_products[0], dot_products[1], blending_weight_poly(distances[0].x));
+	float cd = mix(dot_products[2], dot_products[3], blending_weight_poly(distances[0].x));
+	float ef = mix(dot_products[4], dot_products[5], blending_weight_poly(distances[0].x));
+	float gh = mix(dot_products[6], dot_products[7], blending_weight_poly(distances[0].x));
+
+	float ij = mix(ab, cd, blending_weight_poly(distances[0].y));
+	float kl = mix(ef, gh, blending_weight_poly(distances[0].y));
+
+	float noise_val = mix(ij, kl, blending_weight_poly(distances[0].z));
+
+	return noise_val;
+}
+
+float perlin_fbm_3d(vec3 point) {
+
+	float result = 0.;
+
+	for (int i = 0; i < num_octaves; i++) {
+		result += pow(ampl_multiplier, float(i)) * abs(perlin_noise(point * pow(freq_multiplier, float(i)))) - 0.5;
+	}
+
+	return result;
+}
+
+float tex_fbm_3d_f(vec3 point) {
+	float h = float(10);
+	vec3 p = vec3(point.x, point.y - floor(point.y / h), floor(point.y / h));
+	float noise_val = perlin_fbm_3d(p);
+	return noise_val;
+}
+
+vec3 tex_fbm_3d(vec3 point) {
+	/*
+	float h = float(10);
+	vec3 p = vec3(point.x, point.y - floor(point.y / h), floor(point.y / h));
+	float noise_val = perlin_fbm_3d(p);
+	return vec3(noise_val);
+	*/
+	return normalize(vec3(perlin_noise(point)));
+}
