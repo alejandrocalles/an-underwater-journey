@@ -33,7 +33,6 @@ vec3 bez3(vec3 a, vec3 b, vec3 c, float t) {
 
 vec3 dbez3(vec3 a, vec3 b, vec3 c, float t) {
     return normalize((2. - 2. * t) * (b - a) + 2. * t * (c - b));
-
 }
 
 vec3 bez2(vec3 a, vec3 b, float t) {
