@@ -26,7 +26,7 @@ const CONTROL_POINTS = [
 
 async function load_resources() {
 	const shaders = {};
-	const shader_names = ['validation.vert.glsl', 'validation.frag.glsl'];
+	const shader_names = ['validation.vert.glsl', 'validation.frag.glsl', 'curve.frag.glsl', 'curve.vert.glsl'];
 	shader_names.forEach((shader_filename) => {
 		shaders[shader_filename] = load_text(`./src/shaders/bezier/${shader_filename}`)
 	});
@@ -41,6 +41,7 @@ async function load_resources() {
 
 async function main() {
     const resources = await load_resources();
+	// Main drawer
     var draw = regl({
         vert: resources['validation.vert.glsl'],
         frag: resources['validation.frag.glsl'],
@@ -53,11 +54,33 @@ async function main() {
 			t: regl.prop('t')
         },
         count: 6
-    })
+    });
+	// Draw the curve
+	var samples = [];
+	const max_samples = 1000;
+	for (let i = 0; i < 1000; i += 1) {
+		samples.push(i / max_samples);
+	}
+	var drawCurve = regl({
+		vert: resources['curve.vert.glsl'],
+		frag: resources['curve.frag.glsl'],
+		attributes: {
+			t: samples
+		},
+		uniforms: {
+			cpoints: regl.prop('cpoints')
+		},
+		primitive: 'lines',
+		count: max_samples
+	});
+	// Main loop
 	regl.frame(({tick}) => {
 		regl.clear({
 			color: [0, 0, 0, 1],
 			depth: 1
+		})
+		drawCurve({
+			cpoints: CONTROL_POINTS
 		})
 		draw({
 			t: (0.5 * Math.cos(tick * 0.05) + 0.5),
