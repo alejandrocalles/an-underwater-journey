@@ -8,6 +8,7 @@ import {init_noise} from "./noise.js"
 import {init_terrain} from "./terrain.js"
 
 import { hexToRgb } from "./utils.js"
+import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
 
 
 async function main() {
@@ -90,15 +91,17 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let camera_position = [0, 0, 0]
+	let camera_position = [1, 1, 1]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
-	let cam_angle_z = -0.5 // in radians!
-	let cam_angle_y = -0.42 // in radians!
+	let cam_angle_z = 0 // in radians!
+	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
 	let cam_target = [0, 0, 0]
+
+	let cam_speed = 0.05
 
 	function update_cam_transform() {
 		/* #TODO PG1.0 Copy camera controls
@@ -111,11 +114,6 @@ async function main() {
 
 		* cam_target - the point we orbit around
 		*/
-		camera_position = [
-			- cam_distance_base * cam_distance_factor * Math.cos(cam_angle_y) * Math.cos(cam_angle_z),
-			cam_distance_base * cam_distance_factor * Math.cos(cam_angle_y) * Math.sin(cam_angle_z),
-			cam_distance_base * cam_distance_factor * Math.sin(-cam_angle_y)
-		];
 		let up_vect = [0, 0, 1];
 		if (Math.cos(cam_angle_y) < 0.) {
 			up_vect = [0, 0, -1];
@@ -123,7 +121,7 @@ async function main() {
 		// Example camera matrix, looking along forward-X, edit this
 		const look_at = mat4.lookAt(mat4.create(), 
 			camera_position, // camera position in world coord
-			[0, 0, 0], // view target point
+			cam_target, // view target point
 			up_vect, // up vector
 		)
 		// Store the combined transform in mat_turntable
@@ -140,16 +138,20 @@ async function main() {
 	window.addEventListener('mousemove', (event) => {
 		// if left or middle button is pressed
 		if (event.buttons & 1 || event.buttons & 4) {
-			if (event.shiftKey) {
-				const r = mat2.fromRotation(mat2.create(), -cam_angle_z)
-				const offset = vec2.transformMat2([0, 0], [event.movementY, event.movementX], r)
-				vec2.scale(offset, offset, -0.01)
-				cam_target[0] += offset[0]
-				cam_target[1] += offset[1]
-			} else {
-				cam_angle_z += event.movementX*0.005
-				cam_angle_y += -event.movementY*0.005
-			}
+			cam_angle_z += event.movementX * 0.001
+			cam_angle_y += event.movementY * 0.001
+		
+			vec3.sub(cam_target, cam_target, camera_position)
+			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
+
+			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
+
+			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
+			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
+
+			vec3.add(cam_target, cam_target, camera_position)
+
 			update_cam_transform()
 			update_needed = true
 		}
@@ -212,6 +214,51 @@ async function main() {
 	register_keyboard_action('z', () => {
 		debug_overlay.classList.toggle('hide')
 	})
+
+
+
+	register_keyboard_action('w', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})
+	register_keyboard_action('s', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.sub(camera_position, camera_position, cam_to_target)
+		vec3.sub(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action('a', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.rotateZ(cam_to_target, cam_to_target, [0, 0, 0], Math.PI/2)
+		cam_to_target[2] = 0
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action('d', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.rotateZ(cam_to_target, cam_to_target, [0, 0, 0], -Math.PI/2)
+		cam_to_target[2] = 0
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
 
 
 	function activate_preset_view() {
