@@ -91,7 +91,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let camera_position = [1, 1, 1]
+	let camera_position = [48, 48, 5]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 

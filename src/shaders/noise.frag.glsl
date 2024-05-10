@@ -376,18 +376,12 @@ float perlin_fbm_3d(vec3 point) {
 }
 
 float tex_fbm_3d_f(vec3 point) {
-	float h = float(10);
-	vec3 p = vec3(point.x, point.y - floor(point.y / h), floor(point.y / h));
-	float noise_val = perlin_fbm_3d(p);
+	float noise_val = perlin_fbm_3d(point);
 	return noise_val;
 }
 
 vec3 tex_fbm_3d(vec3 point) {
-	/*
-	float h = float(10);
-	vec3 p = vec3(point.x, point.y - floor(point.y / h), floor(point.y / h));
-	float noise_val = perlin_fbm_3d(p);
+	float noise_val = tex_fbm_3d_f(point);
 	return vec3(noise_val);
-	*/
-	return normalize(vec3(perlin_noise(point)));
 }
+
