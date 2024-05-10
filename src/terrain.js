@@ -73,6 +73,10 @@ function terrain_build_mesh(height_map) {
 		return (x + y*grid_height + z*grid_depth*grid_height)
 	}
 
+	function xyz_index(x, y, z){
+		return 2 * x
+	}
+
 	cubes = []
 	// marching cubes based on https://www.cs.montana.edu/courses/spring2005/525/students/Hunt1.pdf
 	// and https://paulbourke.net/geometry/polygonise/
@@ -100,6 +104,8 @@ function terrain_build_mesh(height_map) {
 					height_map.get(corners[7][0], corners[7][1], corners[7][2])
 				]
 				cubes[gx][gy][gz] = {val: densities, points: corners}
+
+				vertices[]
 			}
 		}
 	}
@@ -107,7 +113,7 @@ function terrain_build_mesh(height_map) {
 	for(let gz = 0; gz < grid_depth - 1; gz++) {
 		for(let gy = 0; gy < grid_height - 1; gy++) {
 			for(let gx = 0; gx < grid_width - 1; gx++) {
-
+				
 	
 
 	console.log(vertices, normals, faces)
