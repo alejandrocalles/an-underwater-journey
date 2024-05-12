@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>Bezier Curves</title>
+	<meta name="author" content="Gabriel Jiménez">
+
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<script src="src/bezier.js" type="module"></script>
+
+<div id="debug-overlay">
+	<p>
+		A cubic Bezier Curve in 2D.
+		⁙⁙ docs:
+		<a href="https://github.com/regl-project/regl/blob/gh-pages/API.md">regl</a>,
+		<a href="http://glmatrix.net/docs/">gl-matrix</a>,
+		<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript">MDN</a>
+	</p>
+	<p>
+		Input (currently not used): 0
+		<input id="scale-input" type="range" min="0" max="1" step="0.01">
+		1
+	</p>
+	<pre id="debug-text"></pre>
+</div>
+
+</body>
+</html>
