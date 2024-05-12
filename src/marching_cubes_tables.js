@@ -292,5 +292,3 @@ export const edge_table = [
 0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0
 ]
 
-export const powers_of_two = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
-

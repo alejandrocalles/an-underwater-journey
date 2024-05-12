@@ -1,6 +1,6 @@
-import {edge_table, triTable, powers_of_two} from "./marching_cubes_tables.js"
+import {edge_table, triTable} from "./marching_cubes_tables.js"
 
-function vertex_interpolate(isovalue, p1, p2, v1, v2) {
+export function vertex_interpolate(isovalue, p1, p2, v1, v2) {
 	let p = []
 	if (Math.abs(isovalue - v1) < 1e-6) return p1
 	if (Math.abs(isovalue - v2) < 1e-6) return p2
@@ -15,29 +15,11 @@ function vertex_interpolate(isovalue, p1, p2, v1, v2) {
 }
 
 
-export function compute_cube(buffer, x, y, z, height) {
-    var cubeindex = 0
+export function compute_cube(cube) {
+    let cubeindex = 0
     let vert_list = []
     let ntriangle = 0
-    let triangles = []
-
-    let cube = {
-        vert: [],
-        val: []
-    }
-
-    cube.vert[0] = [x, y, z]
-    cube.vert[1] = [x + 1, y, z]
-    cube.vert[2] = [x + 1, y + 1, z]
-    cube.vert[3] = [x, y + 1, z]
-    cube.vert[4] = [x, y, z + 1]
-    cube.vert[5] = [x + 1, y, z + 1]
-    cube.vert[6] = [x + 1, y + 1, z + 1]
-    cube.vert[7] = [x, y + 1, z + 1]
-
-    for (let i = 0; i < 8; i++) {
-        cube.val[i] = buffer.get(cube.vert[i][0], cube.vert[i][1], cube.vert[i][2])
-    }
+    let triangles = {vert_index: [], triangle: []}
 
     for (let i = 0; i < 8; i++) {
         if (cube.val[i] < 0) cubeindex |= 1 << i
@@ -94,14 +76,56 @@ export function compute_cube(buffer, x, y, z, height) {
     }
 
     for (let i = 0; triTable[cubeindex][i] != -1; i += 3) {
-        triangles[ntriangle] = [
+        triangles.triangle[ntriangle] = [
                 vert_list[triTable[cubeindex][i]],
                 vert_list[triTable[cubeindex][i + 1]],
                 vert_list[triTable[cubeindex][i + 2]]
             ]
+        triangles.vert_index[ntriangle] = 
         ntriangle++;
         
     }
 
     return triangles
+}
+
+export function cubeindex_to_v_index(cubeindex, gx, gy, gz, width, height, depth) {
+    let v_index = 0
+    if (cubeindex & 1) {
+        v_index = (gx + 1) + gy * width + gz * width * height
+    }
+    if (cubeindex & 2) {
+        v_index = gx + (gy + 1) * width + gz * width * height
+    }
+    if (cubeindex & 4) {
+        v_index = gx + gy * width + (gz + 1) * width * height
+    }
+    if (cubeindex & 8) {
+        v_index = gx + gy * width + gz * width * height
+    }
+    if (cubeindex & 16) {
+        v_index = (gx + 1) + gy * width + gz * width * height
+    }
+    if (cubeindex & 32) {
+        v_index = (gx + 1) + (gy + 1) * width + gz * width * height
+    }
+    if (cubeindex & 64) {
+        v_index = gx + (gy + 1) * width + gz * width * height
+    }
+    if (cubeindex & 128) {
+        v_index = gx + gy * width + gz * width * height
+    }
+    if (cubeindex & 256) {
+        v_index = gx + gy * width + gz * width * height
+    }
+    if (cubeindex & 512) {
+        v_index = (gx + 1) + gy * width + gz * width * height
+    }
+    if (cubeindex & 1024) {
+        v_index = (gx + 1) + gy * width + (gz + 1) * width * height
+    }
+    if (cubeindex & 2048) {
+        v_index = gx + gy * width + (gz + 1) * width * height
+    }
+    return v_index
 }

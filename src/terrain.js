@@ -1,7 +1,8 @@
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
 import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
 import {mat4_matmul_many} from "./icg_math.js"
-import {compute_cube} from "./Marching_cubes_functions.js"
+import {compute_cube, cubeindex_to_v_index, vertex_interpolate} from "./Marching_cubes_functions.js"
+import { triTable, edge_table } from "./marching_cubes_tables.js"
 
 class BufferData {
 
@@ -53,7 +54,10 @@ function get_vertex_from_edge(edge_number) {
 	return [edge_number % 4, edge_number % 4 + 4]
 }
 
+
 function terrain_build_mesh(height_map) {
+
+	
 	const grid_width = height_map.width
 	const grid_height = height_map.height / 10.
 	const grid_depth = 10
@@ -77,44 +81,103 @@ function terrain_build_mesh(height_map) {
 		return 2 * x
 	}
 
-	cubes = []
 	// marching cubes based on https://www.cs.montana.edu/courses/spring2005/525/students/Hunt1.pdf
 	// and https://paulbourke.net/geometry/polygonise/
-	for(let gz = 0; gz < grid_depth -1; gz++) {
-		for(let gy = 0; gy < grid_height - 1; gy++) {
-			for(let gx = 0; gx < grid_width; gx++) {
-				var corners = [
-					[gx, gy, gz],
-					[gx, gy + 1, gz],
-					[gx + 1, gy + 1, gz],
-					[gx + 1, gy, gz],
-					[gx, gy, gz + 1],
-					[gx, gy + 1, gz + 1],
-					[gx + 1, gy + 1, gz + 1],
-					[gx + 1, gy, gz + 1]
-				]
-				var densities = [
-					height_map.get(corners[0][0], corners[0][1], corners[0][2]),
-					height_map.get(corners[1][0], corners[1][1], corners[1][2]),
-					height_map.get(corners[2][0], corners[2][1], corners[2][2]),
-					height_map.get(corners[3][0], corners[3][1], corners[3][2]),
-					height_map.get(corners[4][0], corners[4][1], corners[4][2]),
-					height_map.get(corners[5][0], corners[5][1], corners[5][2]),
-					height_map.get(corners[6][0], corners[6][1], corners[6][2]),
-					height_map.get(corners[7][0], corners[7][1], corners[7][2])
-				]
-				cubes[gx][gy][gz] = {val: densities, points: corners}
-
-				vertices[]
-			}
-		}
-	}
 
 	for(let gz = 0; gz < grid_depth - 1; gz++) {
 		for(let gy = 0; gy < grid_height - 1; gy++) {
 			for(let gx = 0; gx < grid_width - 1; gx++) {
-				
+				console.log(height_map.get(1, 1))
+				vertices[xyz_to_v_index(gx, gy, gz)] = vertex_interpolate(0, [gx, gy, gz], [gx + 1, gy, gz], height_map.get(gx, gy + gz), height_map.get(gx + 1, gy + gz))
+			}
+		}
+	}
 	
+
+	for(let gz = 0; gz < grid_depth - 1; gz++) {
+		for(let gy = 0; gy < grid_height - 1; gy++) {
+			for(let gx = 0; gx < grid_width - 1; gx++) {
+				let cubeindex = 0
+				let vert_list = []
+
+				for (let i = 0; i < 8; i++) {
+					let val = height_map.get(gx + (i & 1), gy + ((i & 2) >> 1), gz + ((i & 4) >> 2))
+					if (val < 0) cubeindex |= 1 << i
+				}
+
+				if (edge_table[cubeindex] == 0) continue
+
+				if (edge_table[cubeindex] & 1) {
+					vert_list[0] = vertices[xyz_to_v_index(gx, gy + 1, gz)]
+				}
+
+				if (edge_table[cubeindex] & 2) {
+					vert_list[1] = vertices[xyz_to_v_index(gx + 1, gy, gz)]
+				}
+
+				if (edge_table[cubeindex] & 4) {
+					vert_list[2] = vertices[xyz_to_v_index(gx + 1, gy, gz + 1)]
+				}
+
+				if (edge_table[cubeindex] & 8) {
+					vert_list[3] = vertices[xyz_to_v_index(gx, gy, gz + 1)]
+				}
+
+				if (edge_table[cubeindex] & 16) {
+					vert_list[4] = vertices[xyz_to_v_index(gx, gy + 1, gz)]
+				}
+
+				if (edge_table[cubeindex] & 32) {
+					vert_list[5] = vertices[xyz_to_v_index(gx + 1, gy + 1, gz)]
+				}
+
+				if (edge_table[cubeindex] & 64) {
+					vert_list[6] = vertices[xyz_to_v_index(gx + 1, gy + 1, gz + 1)]
+				}
+
+				if (edge_table[cubeindex] & 128) {
+					vert_list[7] = vertices[xyz_to_v_index(gx, gy + 1, gz + 1)]
+				}
+
+				if (edge_table[cubeindex] & 256) {
+					vert_list[8] = vertices[xyz_to_v_index(gx, gy, gz)]
+				}
+
+				if (edge_table[cubeindex] & 512) {
+					vert_list[9] = vertices[xyz_to_v_index(gx + 1, gy, gz)]
+				}
+
+				if (edge_table[cubeindex] & 1024) {
+					vert_list[10] = vertices[xyz_to_v_index(gx + 1, gy, gz + 1)]
+				}
+
+				if (edge_table[cubeindex] & 2048) {
+					vert_list[11] = vertices[xyz_to_v_index(gx, gy, gz + 1)]
+				}
+
+				for (let i = 0; triTable[cubeindex][i] != -1; i += 3) {
+					let v0 = vert_list[triTable[cubeindex][i]]
+					let v1 = vert_list[triTable[cubeindex][i + 1]]
+					let v2 = vert_list[triTable[cubeindex][i + 2]]
+					
+					faces.push([
+						cubeindex_to_v_index(triTable[cubeindex][i], gx, gy, gz, grid_width, grid_height, grid_depth),
+						cubeindex_to_v_index(triTable[cubeindex][i + 1], gx, gy, gz, grid_width, grid_height, grid_depth),
+						cubeindex_to_v_index(triTable[cubeindex][i + 2], gx, gy, gz, grid_width, grid_height, grid_depth),
+					])
+
+					let normal = vec3.create()
+					let v0v1 = vec3.create()
+					let v0v2 = vec3.create()
+					vec3.subtract(v0v1, v1, v0)
+					vec3.subtract(v0v2, v2, v0)
+					vec3.cross(normal, v0v1, v0v2)
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+				}
+			}
+		}
+	}
 
 	console.log(vertices, normals, faces)
 	

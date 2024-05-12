@@ -158,25 +158,13 @@ async function main() {
 
 	})
 
-	window.addEventListener('wheel', (event) => {
-		// scroll wheel to zoom in or out
-		const factor_mul_base = 1.08
-		const factor_mul = (event.deltaY > 0) ? factor_mul_base : 1./factor_mul_base
-		cam_distance_factor *= factor_mul
-		cam_distance_factor = Math.max(0.1, Math.min(cam_distance_factor, 4))
-		// console.log('wheel', event.deltaY, event.deltaMode)
-		event.preventDefault() // don't scroll the page too...
-		update_cam_transform()
-		update_needed = true
-	})
-
 	/*---------------------------------------------------------------
 		Actors
 	---------------------------------------------------------------*/
 
 	const noise_textures = init_noise(regl, resources)
-	/*
-	const texture_fbm = (() => {
+	
+	const texture_fbm_3d = (() => {
 		for(const t of noise_textures) {
 			//if(t.name === 'FBM') {
 			if(t.name === 'FBM_for_terrain') {
@@ -185,8 +173,8 @@ async function main() {
 		}
 	})()
 
-	texture_fbm.draw_texture_to_buffer({width: 96, height: 96, mouse_offset: [-12.24, 8.15]})
-	*/
+	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96, mouse_offset: [-12.24, 8.15]})
+	/*
 
 	const texture_fbm_3d = (() => {
 		for(const t of noise_textures) {
@@ -197,8 +185,8 @@ async function main() {
 	})()
 
 
-	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96 * 10, mouse_offset: [-12.24, 8.15]})
-
+	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96 * 10, mouse_offset: [-12.24, 8.15], zoom_factor: 1.0})
+*/
 	const fog_args = {
 		fog_color: [0., 0., 1.],
 		closeFarThreshold: [0., 3.],
@@ -220,6 +208,7 @@ async function main() {
 	register_keyboard_action('w', () => {
 		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		cam_to_target[2] = 0
 		vec3.add(camera_position, camera_position, cam_to_target)
 		vec3.add(cam_target, cam_target, cam_to_target)
 
@@ -229,6 +218,7 @@ async function main() {
 	register_keyboard_action('s', () => {
 		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		cam_to_target[2] = 0
 		vec3.sub(camera_position, camera_position, cam_to_target)
 		vec3.sub(cam_target, cam_target, cam_to_target)
 
@@ -251,6 +241,30 @@ async function main() {
 		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
 		vec3.rotateZ(cam_to_target, cam_to_target, [0, 0, 0], -Math.PI/2)
+		cam_to_target[2] = 0
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action('shift', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.rotateY(cam_to_target, cam_to_target, [0, 0, 0], -Math.PI/2)
+		cam_to_target[2] = 0
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action(' ', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.rotateY(cam_to_target, cam_to_target, [0, 0, 0], Math.PI/2)
 		cam_to_target[2] = 0
 
 		vec3.add(camera_position, camera_position, cam_to_target)

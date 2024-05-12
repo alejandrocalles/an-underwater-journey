@@ -75,9 +75,9 @@ export function init_noise(regl, resources) {
 varying vec2 v2f_tex_coords;
 
 void main() {
-	vec3 color = ${this.shader_func_name}(vec3(v2f_tex_coords, 1.));
+	vec3 color = ${this.shader_func_name}(v2f_tex_coords);
 	gl_FragColor = vec4(color, 1.0);
-} 
+}
 `;		
 		}
 
@@ -119,8 +119,8 @@ void main() {
 		new NoiseTexture('Marble', 'tex_marble'),
 		new NoiseTexture('Wood', 'tex_wood'),
 		new NoiseTexture('Liquid', 'tex_liquid', true),
-		//new NoiseTexture('FBM_for_terrain', 'tex_fbm_for_terrain', true),
-		new NoiseTexture('FBM_3d', 'tex_fbm_3d', true),
+		new NoiseTexture('FBM_for_terrain', 'tex_fbm_for_terrain', true),
+		//new NoiseTexture('FBM_3d', 'tex_fbm_3d', true),
 	]
 
 	return noise_textures
