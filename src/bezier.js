@@ -50,26 +50,35 @@ async function main() {
         },
         elements: mesh.faces,
         uniforms: {
-           	cpoints: regl.prop('cpoints'),
+			"cpoints[0]": (context, props, batchId) => [props.sx, props.sy],
+			"cpoints[1]": [-0.1, -0.1],
+			"cpoints[2]": [0.3, 0.5],
+			"cpoints[3]": (context, props, batchId) => [props.ex, props.ey],
 			t: regl.prop('t')
         },
         count: 6
     });
 	// Draw the curve
-	var samples = [];
+	const samples = [];
+	const indices = [];
 	const max_samples = 1000;
 	for (let i = 0; i < 1000; i += 1) {
 		samples.push(i / max_samples);
+		indices.push(i);
 	}
 	var drawCurve = regl({
 		vert: resources['curve.vert.glsl'],
 		frag: resources['curve.frag.glsl'],
 		attributes: {
-			t: samples
+			t: samples,
+			index: indices
 		},
 		uniforms: {
-			cpoints: regl.prop('cpoints'),
-			time: regl.prop('t')
+			"cpoints[0]": (context, props, batchId) => [props.sx, props.sy],
+			"cpoints[1]": [-0.1, -0.1],
+			"cpoints[2]": [0.3, 0.5],
+			"cpoints[3]": (context, props, batchId) => [props.ex, props.ey],
+			time: (context, props, batchId) => (props.t * max_samples)
 		},
 		primitive: 'points',
 		count: max_samples
@@ -81,10 +90,18 @@ async function main() {
 			depth: 1
 		})
 		drawCurve({
+			sx: +document.querySelector('#s-x').value,
+			sy: +document.querySelector('#s-y').value,
+			ex: +document.querySelector('#e-x').value,
+			ey: +document.querySelector('#e-y').value,
 			t: (0.5 * Math.sin(tick * 0.01) + 0.5),
 			cpoints: CONTROL_POINTS
 		})
 		draw({
+			sx: +document.querySelector('#s-x').value,
+			sy: +document.querySelector('#s-y').value,
+			ex: +document.querySelector('#e-x').value,
+			ey: +document.querySelector('#e-y').value,
 			t: (0.5 * Math.sin(tick * 0.01) + 0.5),
 			cpoints: CONTROL_POINTS
 		})

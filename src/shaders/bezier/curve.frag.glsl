@@ -1,7 +1,10 @@
 precision highp float;
 
 uniform float time;
+varying float ix;
 
 void main() {
-    gl_FragColor = vec4(1., 1., 1., 0.01);
+    if (ix <= time) {
+        gl_FragColor = vec4(1., 1., 1., 1.0);
+    } 
 }
