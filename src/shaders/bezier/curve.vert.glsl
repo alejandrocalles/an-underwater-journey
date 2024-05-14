@@ -1,5 +1,10 @@
 precision highp float;
 
+#define NPOINTS 4
+
+uniform vec2 cpoints[NPOINTS];
+attribute float t;
+
 vec3 bez4(vec3 a, vec3 b, vec3 c, vec3 d, float t) {
     return mix(
         mix(
@@ -16,21 +21,11 @@ vec3 bez4(vec3 a, vec3 b, vec3 c, vec3 d, float t) {
     );
 }
 
-#define NPOINTS 4
-
-uniform vec2 cpoints[NPOINTS];
-
-attribute float t;
-
-vec2 bez4_2d(float t) {
+void main() {
     vec3 a = vec3(cpoints[0], 0.);
     vec3 b = vec3(cpoints[1], 0.);
     vec3 c = vec3(cpoints[2], 0.);
     vec3 d = vec3(cpoints[3], 0.);
-    return bez4(a, b, c, d, t).xy;
-}
-
-void main() {
-    gl_PointSize = 40.;
-    gl_Position = vec4(bez4_2d(t), 0., 1.); 
+    gl_PointSize = 2.0;
+    gl_Position = vec4(bez4(a, b, c, d, t).xy, 0., 1.); 
 }

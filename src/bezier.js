@@ -68,9 +68,10 @@ async function main() {
 			t: samples
 		},
 		uniforms: {
-			cpoints: regl.prop('cpoints')
+			cpoints: regl.prop('cpoints'),
+			time: regl.prop('t')
 		},
-		primitive: 'lines',
+		primitive: 'points',
 		count: max_samples
 	});
 	// Main loop
@@ -80,10 +81,11 @@ async function main() {
 			depth: 1
 		})
 		drawCurve({
+			t: (0.5 * Math.sin(tick * 0.01) + 0.5),
 			cpoints: CONTROL_POINTS
 		})
 		draw({
-			t: (0.5 * Math.cos(tick * 0.05) + 0.5),
+			t: (0.5 * Math.sin(tick * 0.01) + 0.5),
 			cpoints: CONTROL_POINTS
 		})
 	})
