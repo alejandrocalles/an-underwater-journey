@@ -1,6 +1,9 @@
 precision highp float;
 
+uniform sampler2D u_water_texture;
+
 varying float v2f_height;
+varying vec2 uv;
 
 /* #TODO PG1.6.1: Copy Blinn-Phong shader setup from previous exercises */
 varying vec3 v2f_normal;

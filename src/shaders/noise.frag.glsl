@@ -811,3 +811,41 @@ vec3 tex_fbm_3d(vec3 point, int fbm) {
 	return vec3(result);
 }
 
+#define N_CENTERS 4
+#define CELLULAR_CENTER_RADIUS 0.005
+vec3 tex_cellular(vec2 point) {
+	vec3 pixel_color = vec3(0.0, 0.0, 0.0);
+	vec2 center[N_CENTERS];
+    center[0] = vec2(0.83,0.75);
+    center[1] = vec2(0.60,0.07);
+    center[2] = vec2(0.28,0.64);
+    center[3] = vec2(0.01,0.05);
+	float m_dist = 1.;
+	for (int i = 0; i < N_CENTERS; i++) {
+        float dist = distance(point, center[i]);
+        // Keep the closer distance
+        m_dist = min(m_dist, dist);
+    }
+
+    // Draw the min distance (distance field)
+	pixel_color += m_dist;
+
+
+	// Brighten the texture a bit
+	pixel_color += 0.2;
+	clamp(pixel_color, 0.0, 1.0);
+
+	// Show center points
+	/*
+	for (int i = 0; i < N_CENTERS; i++) {
+		if (distance(point, center[i]) <= CELLULAR_CENTER_RADIUS) {
+			pixel_color = vec3(1.0, 0.0, 0.0);
+		}
+    }
+	*/
+
+    // Show isolines
+    //color -= step(.7,abs(sin(50.0*m_dist)))*.3;
+
+	return pixel_color;
+}

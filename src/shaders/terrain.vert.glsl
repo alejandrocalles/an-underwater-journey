@@ -2,6 +2,7 @@ attribute vec3 position;
 attribute vec3 normal;
 
 varying float v2f_height;
+varying vec2 uv;
 
 /* #TODO PG1.6.1: Copy Blinn-Phong shader setup from previous exercises */
 varying vec3 v2f_normal;
@@ -18,6 +19,7 @@ uniform vec4 light_position; //in camera space coordinates already
 void main()
 {
     v2f_height = position.z;
+	uv = (position + 0.5).xy;
     vec4 position_v4 = vec4(position, 1);
 
     /** #TODO PG1.6.1:
