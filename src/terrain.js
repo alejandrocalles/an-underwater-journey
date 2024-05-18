@@ -1,7 +1,7 @@
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
 import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
 import {mat4_matmul_many} from "./icg_math.js"
-import {compute_cube, cubeindex_to_v_index, vertex_interpolate} from "./Marching_cubes_functions.js"
+import {compute_cube, index_to_v_index, vertex_interpolate} from "./Marching_cubes_functions.js"
 import { triTable, edge_table } from "./marching_cubes_tables.js"
 
 class BufferData {
@@ -22,12 +22,11 @@ class BufferData {
 
 	}
 
-	get(x, y, z) {
+	get(x, y) {
 		x = Math.min(Math.max(x, 0), this.width - 1)
 		y = Math.min(Math.max(y, 0), this.height - 1)
-		z = Math.min(Math.max(z, 0), this.depth - 1)
 
-		return this.data[x + y*this.width + z * this.width * this.height] * this.scale
+		return this.data[x + y*this.width << 2] * this.scale
 	}
 }
 
@@ -55,12 +54,12 @@ function get_vertex_from_edge(edge_number) {
 }
 
 
-function terrain_build_mesh(height_map) {
+function terrain_build_mesh(height_map, depth) {
 
 	
 	const grid_width = height_map.width
-	const grid_height = height_map.height / 10.
-	const grid_depth = 10
+	const grid_height = height_map.height / depth
+	const grid_depth = depth
 
 	const WATER_LEVEL = -0.03125
 
@@ -68,31 +67,26 @@ function terrain_build_mesh(height_map) {
 	const normals = []
 	const faces = []
 
-	// Map a 2D grid index (x, y) into a 1D index into the output vertex array.
-	function xy_to_v_index(x, y) {
-		return x + y*grid_width
+	function xyz_to_v_index(x, y, z, offset) {
+		return (x + y*grid_height + z*grid_width*grid_height) * 3 + offset
 	}
 
-	function xyz_to_v_index(x, y, z) {
-		return (x + y*grid_height + z*grid_depth*grid_height)
-	}
-
-	function xyz_index(x, y, z){
-		return 2 * x
-	}
-
+	// one cube takes two unis in y and z direction
 	// marching cubes based on https://www.cs.montana.edu/courses/spring2005/525/students/Hunt1.pdf
 	// and https://paulbourke.net/geometry/polygonise/
+	for(let gz = 0; gz < grid_depth; gz++) {
+		for(let gy = 0; gy < grid_height; gy++) {
+			for(let gx = 0; gx < grid_width; gx++) {
+				vertices[xyz_to_v_index(gx, gy, gz, 0)] = vertex_interpolate(0, [gx, gy, gz], [gx + 1, gy, gz], height_map.get(gx, gy * grid_depth + gz), height_map.get(gx + 1, gy * grid_depth + gz))
+				vertices[xyz_to_v_index(gx, gy, gz, 1)] = vertex_interpolate(0, [gx, gy, gz], [gx, gy + 1, gz], height_map.get(gx, gy * grid_depth + gz), height_map.get(gx, (gy + 1) * grid_depth + gz))
+				vertices[xyz_to_v_index(gx, gy, gz, 2)] = vertex_interpolate(0, [gx, gy, gz], [gx, gy, gz + 1], height_map.get(gx, gy * grid_depth + gz), height_map.get(gx, gy * grid_depth + gz + 1))
 
-	for(let gz = 0; gz < grid_depth - 1; gz++) {
-		for(let gy = 0; gy < grid_height - 1; gy++) {
-			for(let gx = 0; gx < grid_width - 1; gx++) {
-				console.log(height_map.get(1, 1))
-				vertices[xyz_to_v_index(gx, gy, gz)] = vertex_interpolate(0, [gx, gy, gz], [gx + 1, gy, gz], height_map.get(gx, gy + gz), height_map.get(gx + 1, gy + gz))
+				normals[xyz_to_v_index(gx, gy, gz, 0)] = vec3.create()
+				normals[xyz_to_v_index(gx, gy, gz, 1)] = vec3.create()
+				normals[xyz_to_v_index(gx, gy, gz, 2)] = vec3.create()
 			}
 		}
 	}
-	
 
 	for(let gz = 0; gz < grid_depth - 1; gz++) {
 		for(let gy = 0; gy < grid_height - 1; gy++) {
@@ -108,62 +102,62 @@ function terrain_build_mesh(height_map) {
 				if (edge_table[cubeindex] == 0) continue
 
 				if (edge_table[cubeindex] & 1) {
-					vert_list[0] = vertices[xyz_to_v_index(gx, gy + 1, gz)]
+					vert_list[0] = vertices[xyz_to_v_index(gx, gy, gz, 0)]
 				}
 
 				if (edge_table[cubeindex] & 2) {
-					vert_list[1] = vertices[xyz_to_v_index(gx + 1, gy, gz)]
+					vert_list[1] = vertices[xyz_to_v_index(gx + 1, gy, gz, 1)]
 				}
 
 				if (edge_table[cubeindex] & 4) {
-					vert_list[2] = vertices[xyz_to_v_index(gx + 1, gy, gz + 1)]
+					vert_list[2] = vertices[xyz_to_v_index(gx, gy + 1, gz, 0)]
 				}
 
 				if (edge_table[cubeindex] & 8) {
-					vert_list[3] = vertices[xyz_to_v_index(gx, gy, gz + 1)]
+					vert_list[3] = vertices[xyz_to_v_index(gx, gy, gz, 1)]
 				}
 
 				if (edge_table[cubeindex] & 16) {
-					vert_list[4] = vertices[xyz_to_v_index(gx, gy + 1, gz)]
+					vert_list[4] = vertices[xyz_to_v_index(gx, gy, gz + 1, 0)]
 				}
 
 				if (edge_table[cubeindex] & 32) {
-					vert_list[5] = vertices[xyz_to_v_index(gx + 1, gy + 1, gz)]
+					vert_list[5] = vertices[xyz_to_v_index(gx + 1, gy, gz + 1, 1)]
 				}
 
 				if (edge_table[cubeindex] & 64) {
-					vert_list[6] = vertices[xyz_to_v_index(gx + 1, gy + 1, gz + 1)]
+					vert_list[6] = vertices[xyz_to_v_index(gx, gy + 1, gz + 1, 0)]
 				}
 
 				if (edge_table[cubeindex] & 128) {
-					vert_list[7] = vertices[xyz_to_v_index(gx, gy + 1, gz + 1)]
+					vert_list[7] = vertices[xyz_to_v_index(gx, gy, gz + 1, 1)]
 				}
 
 				if (edge_table[cubeindex] & 256) {
-					vert_list[8] = vertices[xyz_to_v_index(gx, gy, gz)]
+					vert_list[8] = vertices[xyz_to_v_index(gx, gy, gz, 2)]
 				}
 
 				if (edge_table[cubeindex] & 512) {
-					vert_list[9] = vertices[xyz_to_v_index(gx + 1, gy, gz)]
+					vert_list[9] = vertices[xyz_to_v_index(gx + 1, gy, gz, 2)]
 				}
 
 				if (edge_table[cubeindex] & 1024) {
-					vert_list[10] = vertices[xyz_to_v_index(gx + 1, gy, gz + 1)]
+					vert_list[10] = vertices[xyz_to_v_index(gx + 1, gy + 1, gz + 1, 2)]
 				}
 
 				if (edge_table[cubeindex] & 2048) {
-					vert_list[11] = vertices[xyz_to_v_index(gx, gy, gz + 1)]
+					vert_list[11] = vertices[xyz_to_v_index(gx, gy + 1, gz + 1, 2)]
 				}
-
+				
 				for (let i = 0; triTable[cubeindex][i] != -1; i += 3) {
 					let v0 = vert_list[triTable[cubeindex][i]]
 					let v1 = vert_list[triTable[cubeindex][i + 1]]
 					let v2 = vert_list[triTable[cubeindex][i + 2]]
-					
+
 					faces.push([
-						cubeindex_to_v_index(triTable[cubeindex][i], gx, gy, gz, grid_width, grid_height, grid_depth),
-						cubeindex_to_v_index(triTable[cubeindex][i + 1], gx, gy, gz, grid_width, grid_height, grid_depth),
-						cubeindex_to_v_index(triTable[cubeindex][i + 2], gx, gy, gz, grid_width, grid_height, grid_depth),
+						index_to_v_index(triTable[cubeindex][i], gx, gy, gz, grid_width, grid_height),
+						index_to_v_index(triTable[cubeindex][i + 1], gx, gy, gz, grid_width, grid_height),
+						index_to_v_index(triTable[cubeindex][i + 2], gx, gy, gz, grid_width, grid_height),
 					])
 
 					let normal = vec3.create()
@@ -173,7 +167,9 @@ function terrain_build_mesh(height_map) {
 					vec3.subtract(v0v2, v2, v0)
 					vec3.cross(normal, v0v1, v0v2)
 					vec3.normalize(normal, normal)
-					normals.push(normal)
+					normals[index_to_v_index(triTable[cubeindex][i], gx, gy, gz, grid_width, grid_height, grid_depth)] = (normal)
+					normals[index_to_v_index(triTable[cubeindex][i + 1], gx, gy, gz, grid_width, grid_height, grid_depth)] = (normal)
+					normals[index_to_v_index(triTable[cubeindex][i + 2], gx, gy, gz, grid_width, grid_height, grid_depth)] = (normal)
 				}
 			}
 		}
@@ -189,11 +185,9 @@ function terrain_build_mesh(height_map) {
 }
 
 
-export function init_terrain(regl, resources, height_map_buffer) {
+export function init_terrain(regl, resources, height_map_buffer, depth) {
 
-	const terrain_mesh = terrain_build_mesh(new BufferData(regl, height_map_buffer))
-
-	console.log(height_map_buffer)
+	const terrain_mesh = terrain_build_mesh(new BufferData(regl, height_map_buffer, depth), depth)
 
 	const pipeline_draw_terrain = regl({
 		attributes: {

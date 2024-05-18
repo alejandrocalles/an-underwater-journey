@@ -101,7 +101,7 @@ async function main() {
 
 	let cam_target = [0, 0, 0]
 
-	let cam_speed = 0.05
+	let cam_speed = 0.2
 
 	function update_cam_transform() {
 		/* #TODO PG1.0 Copy camera controls
@@ -167,26 +167,14 @@ async function main() {
 	const texture_fbm_3d = (() => {
 		for(const t of noise_textures) {
 			//if(t.name === 'FBM') {
-			if(t.name === 'FBM_for_terrain') {
-				return t
-			}
-		}
-	})()
-
-	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96, mouse_offset: [-12.24, 8.15]})
-	/*
-
-	const texture_fbm_3d = (() => {
-		for(const t of noise_textures) {
 			if(t.name === 'FBM_3d') {
 				return t
 			}
 		}
 	})()
 
+	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96 * 100, mouse_offset: [-12.24, 8.15]})
 
-	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96 * 10, mouse_offset: [-12.24, 8.15], zoom_factor: 1.0})
-*/
 	const fog_args = {
 		fog_color: [0., 0., 1.],
 		closeFarThreshold: [0., 3.],
@@ -194,7 +182,7 @@ async function main() {
 		useFog: true,
 	}
 
-	const terrain_actor = init_terrain(regl, resources, texture_fbm_3d.get_buffer())
+	const terrain_actor = init_terrain(regl, resources, texture_fbm_3d.get_buffer(), 100)
 
 	/*
 		UI
@@ -249,26 +237,20 @@ async function main() {
 		update_cam_transform()
 		update_needed = true
 	})	
-	register_keyboard_action('shift', () => {
-		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
-		vec3.scale(cam_to_target, cam_to_target, cam_speed)
-		vec3.rotateY(cam_to_target, cam_to_target, [0, 0, 0], -Math.PI/2)
-		cam_to_target[2] = 0
+	register_keyboard_action('e', () => {
+		let movement = [0, 0, 0.1]
 
-		vec3.add(camera_position, camera_position, cam_to_target)
-		vec3.add(cam_target, cam_target, cam_to_target)
+		vec3.add(camera_position, camera_position, movement)
+		vec3.add(cam_target, cam_target, movement)
 
 		update_cam_transform()
 		update_needed = true
 	})	
-	register_keyboard_action(' ', () => {
-		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
-		vec3.scale(cam_to_target, cam_to_target, cam_speed)
-		vec3.rotateY(cam_to_target, cam_to_target, [0, 0, 0], Math.PI/2)
-		cam_to_target[2] = 0
+	register_keyboard_action('q', () => {
+		let movement = [0, 0, -0.1]
 
-		vec3.add(camera_position, camera_position, cam_to_target)
-		vec3.add(cam_target, cam_target, cam_to_target)
+		vec3.add(camera_position, camera_position, movement)
+		vec3.add(cam_target, cam_target, movement)
 
 		update_cam_transform()
 		update_needed = true

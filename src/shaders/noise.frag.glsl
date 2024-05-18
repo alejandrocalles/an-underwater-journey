@@ -377,12 +377,12 @@ float perlin_fbm_3d(vec3 point) {
 
 float tex_fbm_3d_f(vec3 point) {
 	float noise_val = perlin_fbm_3d(point);
+	// noise_val = perlin_noise(point);
 	return noise_val;
 }
 
 vec3 tex_fbm_3d(vec2 point) {
-	//float noise_val = tex_fbm_3d_f(vec3(point.x, floor(point.y/10.), point.y - floor(point.y/10.)));
-	//return vec3(noise_val);
-	return vec3(point, 1.);
+	float noise_val = tex_fbm_3d_f(vec3(point.x, floor(point.y/100.), point.y - floor(point.y/100.)));
+	return vec3(noise_val);
 }
 

@@ -1,15 +1,26 @@
 import {edge_table, triTable} from "./marching_cubes_tables.js"
 
 export function vertex_interpolate(isovalue, p1, p2, v1, v2) {
+    let shrink_value = 0.1
+
 	let p = []
 	if (Math.abs(isovalue - v1) < 1e-6) return p1
 	if (Math.abs(isovalue - v2) < 1e-6) return p2
 	if (Math.abs(v1 - v2) < 1e-6) return p1
+    if (Math.abs(v2 - v1) < 1e-6) return p2
 
-	const mu = (isovalue - v1) / (v2 - v1)
-	p[0] = p1[0] + mu * (p2[0] - p1[0])
-	p[1] = p1[1] + mu * (p2[1] - p1[1])
-	p[2] = p1[2] + mu * (p2[2] - p1[2])
+	const mu = (v2 - v1) / 2
+    p1[0] = p1[0] * shrink_value
+    p1[1] = p1[1] * shrink_value
+    p1[2] = p1[2] * shrink_value
+
+    p2[0] = p2[0] * shrink_value
+    p2[1] = p2[1] * shrink_value
+    p2[2] = p2[2] * shrink_value
+
+	p[0] = Math.min(Math.max(p1[0] + mu * (p2[0] - p1[0]), p1[0]), p2[0])
+    p[1] = Math.min(Math.max(p1[1] + mu * (p2[1] - p1[1]), p1[1]), p2[1])
+    p[2] = Math.min(Math.max(p1[2] + mu * (p2[2] - p1[2]), p1[2]), p2[2])
 
 	return p
 }
@@ -88,44 +99,43 @@ export function compute_cube(cube) {
 
     return triangles
 }
-
-export function cubeindex_to_v_index(cubeindex, gx, gy, gz, width, height, depth) {
+export function index_to_v_index(index, gx, gy, gz, width, height) {
     let v_index = 0
-    if (cubeindex & 1) {
-        v_index = (gx + 1) + gy * width + gz * width * height
+    if (index == 0) {
+        v_index = (gx + gy * width + gz * height * width) * 3
     }
-    if (cubeindex & 2) {
-        v_index = gx + (gy + 1) * width + gz * width * height
+    if (index == 1) {
+        v_index = (gx + 1 + gy * width + gz * height * width) * 3 + 1
     }
-    if (cubeindex & 4) {
-        v_index = gx + gy * width + (gz + 1) * width * height
+    if (index == 2) {
+        v_index = (gx + (gy + 1) * width + gz * height * width) * 3
     }
-    if (cubeindex & 8) {
-        v_index = gx + gy * width + gz * width * height
+    if (index == 3) {
+        v_index = (gx + gy * width + gz * height * width) * 3 + 1
     }
-    if (cubeindex & 16) {
-        v_index = (gx + 1) + gy * width + gz * width * height
+    if (index == 4) {
+        v_index = (gx + gy * width + (gz + 1) * height * width) * 3
     }
-    if (cubeindex & 32) {
-        v_index = (gx + 1) + (gy + 1) * width + gz * width * height
+    if (index == 5) {
+        v_index = (gx + 1 + gy * width + (gz + 1) * height * width) * 3 + 1
     }
-    if (cubeindex & 64) {
-        v_index = gx + (gy + 1) * width + gz * width * height
+    if (index == 6) {
+        v_index = (gx + (gy + 1) * width + (gz + 1) * height * width) * 3
     }
-    if (cubeindex & 128) {
-        v_index = gx + gy * width + gz * width * height
+    if (index == 7) {
+        v_index = (gx + gy * width + (gz + 1) * height * width) * 3 + 1
     }
-    if (cubeindex & 256) {
-        v_index = gx + gy * width + gz * width * height
+    if (index == 8) {
+        v_index = (gx + gy * width + gz * height * width) * 3 + 2
     }
-    if (cubeindex & 512) {
-        v_index = (gx + 1) + gy * width + gz * width * height
+    if (index == 9) {
+        v_index = (gx + 1 + gy * width + gz * height * width) * 3 + 2
     }
-    if (cubeindex & 1024) {
-        v_index = (gx + 1) + gy * width + (gz + 1) * width * height
+    if (index == 10) {
+        v_index = (gx + 1 + (gy + 1) * width + gz * height * width) * 3 + 2
     }
-    if (cubeindex & 2048) {
-        v_index = gx + gy * width + (gz + 1) * width * height
+    if (index == 11) {
+        v_index = (gx + (gy + 1) * width + gz * height * width) * 3 + 2
     }
     return v_index
 }
