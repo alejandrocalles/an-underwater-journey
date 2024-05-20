@@ -1,11 +1,16 @@
 import {createREGL} from "../lib/regljs_2.1.0/regl.module.js"
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
 
-import {DOM_loaded_promise, load_text, register_button_with_hotkey, register_keyboard_action} from "./icg_web.js"
+import {DOM_loaded_promise, load_text, register_button_with_hotkey, register_keyboard_action, register_slider_with_dependency, register_color} from "./icg_web.js"
 import {deg_to_rad, mat4_to_string, vec_to_string, mat4_matmul_many} from "./icg_math.js"
 
 import {init_noise} from "./noise.js"
 import {init_terrain} from "./terrain.js"
+import {init_algae} from "./algae.js"
+
+import { hexToRgb } from "./utils.js"
+import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
+import { load_mesh } from "./icg_mesh.js"
 
 
 async function main() {
@@ -75,6 +80,9 @@ async function main() {
 		"buffer_to_screen.vert.glsl",
 		"buffer_to_screen.frag.glsl",
 
+		"mesh.vert.glsl",
+		"mesh.frag.glsl",
+
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)
 	});
@@ -88,14 +96,17 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
+	let camera_position = [1, 1, 5]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
-	let cam_angle_z = -0.5 // in radians!
-	let cam_angle_y = -0.42 // in radians!
+	let cam_angle_z = 0 // in radians!
+	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
 	let cam_target = [0, 0, 0]
+
+	let cam_speed = 0.05
 
 	function update_cam_transform() {
 		/* #TODO PG1.0 Copy camera controls
@@ -108,19 +119,14 @@ async function main() {
 
 		* cam_target - the point we orbit around
 		*/
-		let campos = [
-			- cam_distance_base * cam_distance_factor * Math.cos(cam_angle_y) * Math.cos(cam_angle_z),
-			cam_distance_base * cam_distance_factor * Math.cos(cam_angle_y) * Math.sin(cam_angle_z),
-			cam_distance_base * cam_distance_factor * Math.sin(-cam_angle_y)
-		];
 		let up_vect = [0, 0, 1];
 		if (Math.cos(cam_angle_y) < 0.) {
 			up_vect = [0, 0, -1];
 		}
 		// Example camera matrix, looking along forward-X, edit this
 		const look_at = mat4.lookAt(mat4.create(), 
-			campos, // camera position in world coord
-			[0, 0, 0], // view target point
+			camera_position, // camera position in world coord
+			cam_target, // view target point
 			up_vect, // up vector
 		)
 		// Store the combined transform in mat_turntable
@@ -137,32 +143,24 @@ async function main() {
 	window.addEventListener('mousemove', (event) => {
 		// if left or middle button is pressed
 		if (event.buttons & 1 || event.buttons & 4) {
-			if (event.shiftKey) {
-				const r = mat2.fromRotation(mat2.create(), -cam_angle_z)
-				const offset = vec2.transformMat2([0, 0], [event.movementY, event.movementX], r)
-				vec2.scale(offset, offset, -0.01)
-				cam_target[0] += offset[0]
-				cam_target[1] += offset[1]
-			} else {
-				cam_angle_z += event.movementX*0.005
-				cam_angle_y += -event.movementY*0.005
-			}
+			cam_angle_z += event.movementX * 0.001
+			cam_angle_y += event.movementY * 0.001
+		
+			vec3.sub(cam_target, cam_target, camera_position)
+			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
+
+			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
+
+			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
+			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
+
+			vec3.add(cam_target, cam_target, camera_position)
+
 			update_cam_transform()
 			update_needed = true
 		}
 
-	})
-
-	window.addEventListener('wheel', (event) => {
-		// scroll wheel to zoom in or out
-		const factor_mul_base = 1.08
-		const factor_mul = (event.deltaY > 0) ? factor_mul_base : 1./factor_mul_base
-		cam_distance_factor *= factor_mul
-		cam_distance_factor = Math.max(0.1, Math.min(cam_distance_factor, 4))
-		// console.log('wheel', event.deltaY, event.deltaMode)
-		event.preventDefault() // don't scroll the page too...
-		update_cam_transform()
-		update_needed = true
 	})
 
 	/*---------------------------------------------------------------
@@ -170,8 +168,8 @@ async function main() {
 	---------------------------------------------------------------*/
 
 	const noise_textures = init_noise(regl, resources)
-
-	const texture_fbm = (() => {
+	
+	const texture_fbm_3d = (() => {
 		for(const t of noise_textures) {
 			//if(t.name === 'FBM') {
 			if(t.name === 'FBM_for_terrain') {
@@ -180,9 +178,29 @@ async function main() {
 		}
 	})()
 
-	texture_fbm.draw_texture_to_buffer({width: 96, height: 96, mouse_offset: [-12.24, 8.15]})
+	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96, mouse_offset: [-12.24, 8.15]})
+	/*
 
-	const terrain_actor = init_terrain(regl, resources, texture_fbm.get_buffer())
+	const texture_fbm_3d = (() => {
+		for(const t of noise_textures) {
+			if(t.name === 'FBM_3d') {
+				return t
+			}
+		}
+	})()
+
+
+	texture_fbm_3d.draw_texture_to_buffer({width: 96, height: 96 * 10, mouse_offset: [-12.24, 8.15], zoom_factor: 1.0})
+*/
+	const fog_args = {
+		fog_color: [0., 0., 1.],
+		closeFarThreshold: [0., 3.],
+		minMaxIntensity: [0.1, 0.7],
+		useFog: true,
+	}
+
+	const terrain_actor = init_terrain(regl, resources, texture_fbm_3d.get_buffer())
+	const algae_actor = init_algae(regl, resources, [0, 0, 0])
 
 	/*
 		UI
@@ -190,6 +208,71 @@ async function main() {
 	register_keyboard_action('z', () => {
 		debug_overlay.classList.toggle('hide')
 	})
+
+
+
+	register_keyboard_action('w', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		cam_to_target[2] = 0
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})
+	register_keyboard_action('s', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		cam_to_target[2] = 0
+		vec3.sub(camera_position, camera_position, cam_to_target)
+		vec3.sub(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action('a', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.rotateZ(cam_to_target, cam_to_target, [0, 0, 0], Math.PI/2)
+		cam_to_target[2] = 0
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action('d', () => {
+		let cam_to_target = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), cam_target, camera_position))
+		vec3.scale(cam_to_target, cam_to_target, cam_speed)
+		vec3.rotateZ(cam_to_target, cam_to_target, [0, 0, 0], -Math.PI/2)
+		cam_to_target[2] = 0
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action('shift', () => {
+		let cam_to_target = [0, 0, -cam_speed]
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
+	register_keyboard_action(' ', () => {
+		let cam_to_target = [0, 0, cam_speed]
+
+		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(cam_target, cam_target, cam_to_target)
+
+		update_cam_transform()
+		update_needed = true
+	})	
 
 
 	function activate_preset_view() {
@@ -204,11 +287,55 @@ async function main() {
 	activate_preset_view()
 	register_button_with_hotkey('btn-preset-view', '1', activate_preset_view)
 
+	function change_fog_distance(close, far, closeChanged) {
+		update_needed = true
+		if (close > far && closeChanged) {
+			fog_args.closeFarThreshold = [close, close]
+			return [close, close, true]
+		}
+		else if (far < close && !closeChanged) {
+			fog_args.closeFarThreshold = [far, far]
+			return [far, far, true]
+		}
+		else {
+			fog_args.closeFarThreshold = [close, far]
+			return [close, far, false]
+		}
+	}
+
+	function change_fog_intensity(min, max, minChanged) {
+		let ret;
+		if (min > max && minChanged) {
+			fog_args.minMaxIntensity = [min, min]
+			return [min, min, true]
+		}
+		else if (max < min && !minChanged) {
+			fog_args.minMaxIntensity = [max, max]
+			return [max, max, true]
+		}
+		else {
+			fog_args.minMaxIntensity = [min, max]
+			return [min, max, false]
+		}
+	}
+
+	function change_fog_color(color) {
+		let rgb = hexToRgb(color)
+		fog_args.fog_color = [rgb.r, rgb.g, rgb.b]
+	}
+
+	register_slider_with_dependency('slider-fog-close', 'slider-fog-far', change_fog_distance)
+	register_slider_with_dependency('slider-fog-min', 'slider-fog-max', change_fog_intensity)
+	register_color('color-fog', change_fog_color)
+
+	register_button_with_hotkey('btn-fog', 'f', () => { fog_args.useFog = !fog_args.useFog; update_needed = true; })
+
 	/*---------------------------------------------------------------
 		Frame render
 	---------------------------------------------------------------*/
 	const mat_projection = mat4.create()
 	const mat_view = mat4.create()
+	const cam_pos = vec3.create()
 
 	let light_position_world = [0.2, -0.3, 0.8, 1.0]
 	//let light_position_world = [1, -1, 1., 1.0]
@@ -239,8 +366,11 @@ async function main() {
 
 			// Set the whole image to black
 			regl.clear({color: [0.9, 0.9, 1., 1]})
-
-			terrain_actor.draw(scene_info)
+			
+			
+			vec3.copy(cam_pos, camera_position)
+			terrain_actor.draw(scene_info, fog_args)
+			algae_actor.draw(scene_info, fog_args)
 		}
 
 // 		debug_text.textContent = `

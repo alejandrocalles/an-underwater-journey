@@ -122,3 +122,35 @@ export function register_button_with_hotkey(button_id, hotkey, func) {
 	register_keyboard_action(hotkey, func)
 	document.getElementById(button_id).addEventListener('click', func)
 }
+
+
+export function register_color(input_id, func) {
+	const input = document.getElementById(input_id);
+	input.addEventListener('input', () => {
+		func(input.value);
+	})
+}
+
+var manual_slider_change = false;
+export function register_slider_with_dependency(slider_id1, slider_id2, func) {
+	const slider1 = document.getElementById(slider_id1);
+	const slider2 = document.getElementById(slider_id2);
+
+	slider1.addEventListener('input', () => {
+		var val1 = parseFloat(slider1.value);
+		var val2 = parseFloat(slider2.value);
+		var new_vals = func(val1, val2, true);
+		if (new_vals[2]) {
+			slider2.value = new_vals[1];
+		}
+	})
+
+	slider2.addEventListener('input', () => {
+		var val1 = parseFloat(slider1.value);
+		var val2 = parseFloat(slider2.value);
+		var new_vals = func(val1, val2, false);
+		if (new_vals[2]) {
+			slider1.value = new_vals[0];
+		}
+	})
+}
