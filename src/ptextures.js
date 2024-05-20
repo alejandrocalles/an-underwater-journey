@@ -18,6 +18,97 @@ const mesh_quad_2d = {
 	],
 }
 
+function init_ptextures(regl, resources) {
+	const cellular_library_code = resources['shaders/ptextures/cellular.frag.glsl']
+
+	const texture_buffer = regl.framebuffer({
+		width: 768,
+		heigh: 768,
+		colorFormat: 'rgba',
+		colorType: 'float',
+		stencil: false,
+		depth: false,
+		mag: 'linear',
+		min: 'linear'
+	})
+
+	const pipeline_generate_texture = regl({
+		attributes: {position: mesh_quad_2d.position},
+		elements: mesh_quad_2d.faces,
+		
+		uniforms: {
+			viewer_position: 	regl.prop('viewer_position'),
+			viewer_scale:    	regl.prop('viewer_scale'),
+			time: 				regl.prop('time'),
+		},
+				
+		vert: resources['shaders/display.vert.glsl'],
+		frag: regl.prop('shader_frag'),
+
+		framebuffer: texture_buffer,
+	})
+
+	const pipeline_draw_buffer_to_screen = regl({
+		attributes: {position: mesh_quad_2d.position},
+		elements: mesh_quad_2d.faces,
+		uniforms: {
+			buffer_to_draw: texture_buffer,
+		},
+		vert: resources['shaders/buffer_to_screen.vert.glsl'],
+		frag: resources['shaders/buffer_to_screen.frag.glsl'],
+	})
+
+	class CellularTexture {
+		constructor(name, function_name, hidden) {
+			this.name = name
+			this.function_name = function_name
+			this.shader_frag = this.generate_frag_shader()
+			this.hidden = hidden
+		}
+
+		generate_frag_shader() {
+			return `${cellular_library_code}\n`
+			+ "\n\n// ------------------ \n\n"
+			+ "uniform float time;\n\n"
+			+ "varying vec2 v2f_tex_coords;\n\n"
+			+ "void main() {\n"
+			+ `\tvec3 color = ${this.function_name}(v2f_tex_coords, time);\n`
+			+ "\tgl_FragColor = vec4(color, 1.0);\n"
+			+ "}\n";
+		}
+
+		get_buffer() {
+			return texture_buffer
+		}
+
+		draw_texture_to_buffer({mouse_offset = [0, 0], zoom_factor = 1.0, width = 768, height = 768, time = 0.}) {
+			// adjust the buffer size to the desired value
+			if (texture_buffer.width != width || texture_buffer.height != height) {
+				texture_buffer.resize(width, height)
+			}
+
+			regl.clear({
+				framebuffer: texture_buffer,
+				color: [0, 0, 0, 1], 
+			})
+
+			pipeline_generate_texture({
+				shader_frag: this.shader_frag,
+				viewer_position: vec2.negate([0, 0], mouse_offset),
+				viewer_scale: zoom_factor,
+				time: time,
+			})
+			
+			return texture_buffer
+		}
+
+		draw_buffer_to_screen() {
+			pipeline_draw_buffer_to_screen()
+		}
+	}
+	return new CellularTexture('cellular_noise', 'tex_cellular')
+}
+
 function init_noise(regl, resources) {
 
 	// shader implementing all noise functions
@@ -110,10 +201,7 @@ void main() {
 			pipeline_draw_buffer_to_screen()
 		}
 	}
-	return {
-		'FBM_for_terrain' : new NoiseTexture('FBM_for_terrain', 'tex_fbm_for_terrain', true),
-		'cellular_noise' : new NoiseTexture('cellular_noise', 'tex_cellular')
-	}
+	return new NoiseTexture('FBM_for_terrain', 'tex_fbm_for_terrain', true);
 }
 
 
@@ -301,6 +389,7 @@ async function main() {
 		"buffer_to_screen.vert.glsl",
 		"buffer_to_screen.frag.glsl",
 
+		"ptextures/cellular.frag.glsl",
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)
 	});
@@ -384,13 +473,18 @@ async function main() {
 	/*---------------------------------------------------------------
 		Actors
 	---------------------------------------------------------------*/
-	const textures = init_noise(regl, resources)
-	const texture_fbm = textures['FBM_for_terrain']
-	const texture_cellular = textures['cellular_noise']
+	const texture_fbm = init_noise(regl, resources)
 
 	texture_fbm.draw_texture_to_buffer({width: 96, height: 96, mouse_offset: [-12.24, 8.15]})
 
 	const terrain_actor = init_terrain(regl, resources, texture_fbm.get_buffer());
+	const txcel = init_ptextures(regl, resources)
+	const tex_buf = txcel.get_buffer()
+	const tex = regl.texture({
+		width: tex_buf.width,
+		height: tex_buf.height,
+		data: regl.read({framebuffer: tex_buf}),
+	})
 
 	/*
 		UI
@@ -435,28 +529,27 @@ async function main() {
 			mat4.copy(mat_view, mat_turntable)
 			// Calculate light position in camera frame
 			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
-
-			texture_cellular.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5})
-			const tex_buf = new BufferData(regl, texture_cellular.get_buffer())
-			const tex = regl.texture({
-				width: tex_buf.width,
-				height: tex_buf.height,
-				data: tex_buf.data,
-			})
-
-			const scene_info = {
-				mat_view:        mat_view,
-				mat_projection:  mat_projection,
-				light_position_cam: light_position_cam,
-				water_texture: tex
-			}
-
-			// Set the whole image to black
-			regl.clear({color: [0.9, 0.9, 1., 1]})
-
-			//texture_cellular.draw_buffer_to_screen()	
-			terrain_actor.draw(scene_info)
 		}
+		txcel.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5, time : frame.tick * 0.02})
+		tex({
+			width: tex_buf.width,
+			height: tex_buf.height,
+			data: regl.read({framebuffer: tex_buf})
+		})
+
+		const scene_info = {
+			mat_view:        mat_view,
+			mat_projection:  mat_projection,
+			light_position_cam: light_position_cam,
+			water_texture: tex
+		}
+
+		// Set the whole image to black
+		regl.clear({color: [0.9, 0.9, 1., 1]})
+		console.log(frame.tick * 0.05)
+
+		terrain_actor.draw(scene_info)
+		//txcel.draw_buffer_to_screen()
 
 // 		debug_text.textContent = `
 // Hello! Sim time is ${sim_time.toFixed(2)} s
