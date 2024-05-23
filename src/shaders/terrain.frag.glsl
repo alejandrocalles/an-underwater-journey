@@ -45,7 +45,7 @@ void main()
 	 		shininess = 2.
 	*/
 	vec3 material_color = vec3(0.0);
-	float shininess = 0.;
+	float shininess = 1.;
 
 	if (abs(height - terrain_water_level) < 0.1) {
 		material_color = terrain_color_water;
@@ -64,6 +64,8 @@ void main()
 		material_color = mix(material_color, terrain_color_sand, weight);
 		shininess = 30.;
 	}
+
+	material_color = mix(material_color, texture2D(u_water_texture, uv).xyz, 0.5);
 
 	/* #TODO PG1.6.1: apply the Blinn-Phong lighting model
     	Add the Blinn-Phong implementation from GL2 here.
