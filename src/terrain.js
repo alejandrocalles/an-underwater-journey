@@ -8,7 +8,7 @@ class BufferData {
 
 	constructor(regl, buffer, depth) {
 		this.width = buffer.width
-		this.height = buffer.height
+		this.height = Math.floor(buffer.height / depth)
 		this.depth = depth
 		this.data = regl.read({framebuffer: buffer})
 
@@ -20,13 +20,18 @@ class BufferData {
 			this.scale = 1.
 		}
 
+		console.log(this.data, this.scale, this.width, this.height, this.depth)
 	}
 
-	get(x, y) {
+	get(x, y, z) {
 		x = Math.min(Math.max(x, 0), this.width - 1)
 		y = Math.min(Math.max(y, 0), this.height - 1)
-
-		return this.data[x + y*this.width << 2] * this.scale
+		z = Math.min(Math.max(z, 0), this.depth - 1)
+		//console.log(x, y, z);
+		//console.log(this.depth, this.width, this.height);
+		//console.log(this)
+		//return  this.data[x + y*this.width*this.depth];
+		return this.data[(x + y*this.width + z*this.width*this.height)<<2] * this.scale
 	}
 }
 
@@ -54,33 +59,136 @@ function get_vertex_from_edge(edge_number) {
 }
 
 
-function terrain_build_mesh(height_map, depth) {
+function terrain_build_mesh(height_map, offset={x: 0, y: 0, z: 0}) {
 
 	
-	const grid_width = height_map.width
-	const grid_height = height_map.height / depth
-	const grid_depth = depth
+	const grid_width_ = height_map.width + offset.x
+	const grid_height_ = height_map.height + offset.y
+	const grid_depth_ = height_map.depth + offset.z
 
-	const WATER_LEVEL = -0.03125
+	const WATER_LEVEL = 96.5
 
 	const vertices = []
 	const normals = []
 	const faces = []
 
-	function xyz_to_v_index(x, y, z, offset) {
-		return (x + y*grid_height + z*grid_width*grid_height) * 3 + offset
+	function xyz_to_v_index(x, y, z, off) {
+		return (x + y*grid_height + z*grid_width_*grid_height) * 3 + off
 	}
 
+
+	for (let x = offset.x; x < grid_width_; x++) {
+		for (let y = offset.y; y < grid_height_; y++) {
+			vertices.push([x, y, WATER_LEVEL])
+
+			let normal = [0, 0, 1]
+			normals.push(normal)
+		}
+	}
+	for (let x = offset.x; x < grid_width_ - 1; x++) {
+		for (let y = offset.y; y < grid_height_ - 1; y++) {
+			let face = [x + y*grid_height_, x + 1 + y*grid_height_, x + (y + 1)*grid_height_]
+			faces.push(face)
+			face = [x + 1 + y*grid_height_, x + 1 + (y + 1)*grid_height_, x + (y + 1)*grid_height_]
+			faces.push(face)
+		}	
+	}
+	
+	for (let z = offset.z; z < grid_depth_; z++) {
+		for (let y = offset.y; y < grid_height_; y++) {
+			for (let x = offset.z; x < grid_width_; x++) {
+				let average = 0
+				average += height_map.get(x, y, z)
+				
+				if (average > 0.5) {
+					let base = vertices.length
+
+					vertices.push([x, y, z])
+					let normal = [-1, -1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x + 1, y, z])
+					normal = [1, -1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x, y + 1, z])
+					normal = [-1, 1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x+ 1, y + 1, z])
+					normal = [-1, -1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x, y, z + 1])
+					normal = [1, 1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x + 1, y, z + 1])
+					normal = [1, -1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x, y + 1, z + 1])
+					normal = [-1, 1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x + 1, y + 1, z + 1])
+					normal = [1, 1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					let face = [base, base + 1, base + 2]
+					faces.push(face)
+					face = [base + 1, base + 2, base + 3]
+					faces.push(face)
+					face = [base, base + 1, base + 4]
+					faces.push(face)
+					face = [base + 1, base + 5, base + 4]
+					faces.push(face)
+					face = [base, base + 2, base + 4]
+					faces.push(face)
+					face = [base + 2, base + 4, base + 6]
+					faces.push(face)
+					face = [base + 7, base + 3, base + 6]
+					faces.push(face)
+					face = [base + 2, base + 3, base + 6]
+					faces.push(face)
+					face = [base + 3, base + 5, base + 7]
+					faces.push(face)
+					face = [base + 3, base + 5, base + 1]
+					faces.push(face)
+					face = [base + 4, base + 5, base + 6]
+					faces.push(face)
+					face = [base + 5, base + 6, base + 7]
+					faces.push(face)
+				}
+			}
+		}
+	}
+
+
+	/*
+	const grid_width = grid_width_
+	const grid_height = grid_height_
+	const grid_depth = grid_depth_
 	// one cube takes two unis in y and z direction
 	// marching cubes based on https://www.cs.montana.edu/courses/spring2005/525/students/Hunt1.pdf
 	// and https://paulbourke.net/geometry/polygonise/
-	for(let gz = 0; gz < grid_depth; gz++) {
+	for(let gx = 0; gx < grid_width; gx++) {
 		for(let gy = 0; gy < grid_height; gy++) {
-			for(let gx = 0; gx < grid_width; gx++) {
-				vertices[xyz_to_v_index(gx, gy, gz, 0)] = vertex_interpolate(0, [gx, gy, gz], [gx + 1, gy, gz], height_map.get(gx, gy * grid_depth + gz), height_map.get(gx + 1, gy * grid_depth + gz))
-				vertices[xyz_to_v_index(gx, gy, gz, 1)] = vertex_interpolate(0, [gx, gy, gz], [gx, gy + 1, gz], height_map.get(gx, gy * grid_depth + gz), height_map.get(gx, (gy + 1) * grid_depth + gz))
-				vertices[xyz_to_v_index(gx, gy, gz, 2)] = vertex_interpolate(0, [gx, gy, gz], [gx, gy, gz + 1], height_map.get(gx, gy * grid_depth + gz), height_map.get(gx, gy * grid_depth + gz + 1))
+			for(let gz= 0; gz < grid_depth; gz++) {
 
+				vertices[xyz_to_v_index(gx, gy, gz, 0)] = vertex_interpolate(0, [gx, gy, gz], [gx + 1, gy, gz], height_map.get(gx, gy, gz), height_map.get(gx + 1, gy, gz), [grid_width, grid_height, grid_depth])
+				vertices[xyz_to_v_index(gx, gy, gz, 1)] = vertex_interpolate(0, [gx, gy, gz], [gx, gy + 1, gz], height_map.get(gx, gy, gz), height_map.get(gx, gy + 1, gz), [grid_width, grid_height, grid_depth])
+				vertices[xyz_to_v_index(gx, gy, gz, 2)] = vertex_interpolate(0, [gx, gy, gz], [gx, gy, gz + 1], height_map.get(gx, gy, gz), height_map.get(gx, gy, gz + 1), [grid_width, grid_height, grid_depth])
+
+				// console.log(height_map.get(gx, gy, gz), height_map.get(gx + 1, gy, gz), height_map.get(gx, gy + 1, gz), height_map.get(gx, gy, gz + 1))
 				normals[xyz_to_v_index(gx, gy, gz, 0)] = vec3.create()
 				normals[xyz_to_v_index(gx, gy, gz, 1)] = vec3.create()
 				normals[xyz_to_v_index(gx, gy, gz, 2)] = vec3.create()
@@ -96,7 +204,7 @@ function terrain_build_mesh(height_map, depth) {
 
 				for (let i = 0; i < 8; i++) {
 					let val = height_map.get(gx + (i & 1), gy + ((i & 2) >> 1), gz + ((i & 4) >> 2))
-					if (val < 0) cubeindex |= 1 << i
+					if (val > 0.3) cubeindex |= 1 << i
 				}
 
 				if (edge_table[cubeindex] == 0) continue
@@ -173,10 +281,10 @@ function terrain_build_mesh(height_map, depth) {
 				}
 			}
 		}
-	}
+	}*/
+	
 
 	console.log(vertices, normals, faces)
-	
 	return {
 		vertex_positions: vertices,
 		vertex_normals: normals,
@@ -185,9 +293,9 @@ function terrain_build_mesh(height_map, depth) {
 }
 
 
-export function init_terrain(regl, resources, height_map_buffer, depth) {
+export function init_terrain(regl, resources, height_map_buffer, depth, offset) {
 
-	const terrain_mesh = terrain_build_mesh(new BufferData(regl, height_map_buffer, depth), depth)
+	const terrain_mesh = terrain_build_mesh(new BufferData(regl, height_map_buffer, depth), offset)
 
 	const pipeline_draw_terrain = regl({
 		attributes: {

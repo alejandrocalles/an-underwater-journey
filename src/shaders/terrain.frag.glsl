@@ -18,7 +18,7 @@ uniform bool useFog;
 
 const vec3  light_color = vec3(1.0, 0.941, 0.898);
 // Small perturbation to prevent "z-fighting" on the water on some machines...
-const float terrain_water_level    = -0.03125 + 1e-6;
+const float terrain_water_level    = 96.5;
 const vec3  terrain_color_water    = vec3(0.29, 0.51, 0.62);
 const vec3  terrain_color_mountain = vec3(0.8, 0.5, 0.4);
 const vec3  terrain_color_grass    = vec3(0.33, 0.43, 0.18);
@@ -42,7 +42,7 @@ void main()
 	vec3 material_color = vec3(0.0);
 	float shininess = 0.;
 
-	if (height <= terrain_water_level) {
+	if (abs(height - terrain_water_level) < 0.1) {
 		material_color = terrain_color_water;
 		shininess = 30.;
 	} else {
@@ -70,5 +70,10 @@ void main()
 		color = mix(color, fog_color, fogFactor);
 	}
 
-	gl_FragColor = vec4(color, 1.); // output: RGBA in 0..1 range
+	vec4 color4 = vec4(color, 1.);
+	if (abs(height - terrain_water_level) < 0.1) {
+		color4 = vec4(color, 0.3);
+	}
+
+	gl_FragColor = color4; // output: RGBA in 0..1 range
 }

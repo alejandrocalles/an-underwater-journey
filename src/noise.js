@@ -22,6 +22,8 @@ export function init_noise(regl, resources) {
 	// Safari (at least older versions of it) does not support reading float buffers...
 	var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 	
+	const tex3D = regl.texture3D
+
 	// shared buffer to which the texture are rendered
 	const noise_buffer = regl.framebuffer({
 		width: 768,
@@ -119,8 +121,8 @@ void main() {
 		new NoiseTexture('Marble', 'tex_marble'),
 		new NoiseTexture('Wood', 'tex_wood'),
 		new NoiseTexture('Liquid', 'tex_liquid', true),
-		//new NoiseTexture('FBM_for_terrain', 'tex_fbm_for_terrain', true),
-		new NoiseTexture('FBM_3d', 'tex_fbm_3d', true),
+		new NoiseTexture('FBM_for_terrain', 'tex_fbm_for_terrain'),
+		new NoiseTexture('FBM_3d', 'tex_fbm_3d'),
 	]
 
 	return noise_textures

@@ -1,7 +1,6 @@
 import {edge_table, triTable} from "./marching_cubes_tables.js"
 
-export function vertex_interpolate(isovalue, p1, p2, v1, v2) {
-    let shrink_value = 0.1
+export function vertex_interpolate(isovalue, p1, p2, v1, v2, shrink) {
 
 	let p = []
 	if (Math.abs(isovalue - v1) < 1e-6) return p1
@@ -10,13 +9,13 @@ export function vertex_interpolate(isovalue, p1, p2, v1, v2) {
     if (Math.abs(v2 - v1) < 1e-6) return p2
 
 	const mu = (v2 - v1) / 2
-    p1[0] = p1[0] * shrink_value
-    p1[1] = p1[1] * shrink_value
-    p1[2] = p1[2] * shrink_value
+    p1[0] = p1[0]
+    p1[1] = p1[1]
+    p1[2] = p1[2]
 
-    p2[0] = p2[0] * shrink_value
-    p2[1] = p2[1] * shrink_value
-    p2[2] = p2[2] * shrink_value
+    p2[0] = p2[0]
+    p2[1] = p2[1]
+    p2[2] = p2[2]
 
 	p[0] = Math.min(Math.max(p1[0] + mu * (p2[0] - p1[0]), p1[0]), p2[0])
     p[1] = Math.min(Math.max(p1[1] + mu * (p2[1] - p1[1]), p1[1]), p2[1])
