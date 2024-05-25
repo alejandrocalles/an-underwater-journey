@@ -5,16 +5,16 @@ export function random_between(min, max) {
 
 function rule_A() {
     if (random_between(0, 1) < 0.5) {
-        return '||^&/\\TA[&&|B][//+B]B'
+        return '||^&/\\TAB[&&|B][//+B]'
     }
     return '||^&/\\T[//+B][|||&^\\\\//A]B'
 }
 
 function rule_B() {
     if (random_between(0, 1) < 0.5) {
-        return 'T+[//T^C][\\\\^+BC]'
+        return 'T+[//T^C][\\\\^+B]'
     }
-    return 'T[//+BC&][T\\^C]C'
+    return 'T[//+B&][T\\^C]'
 }
 
 function rule_C() {

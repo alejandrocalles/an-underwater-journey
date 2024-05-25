@@ -63,7 +63,7 @@ function draw_leaf(vertices, faces, normals, position, direction, angle, width, 
     let perpendiculat = vec3.rotateX([], direction, [0, 0, 0], Math.PI/2)
     perpendiculat = vec3.normalize(perpendiculat, perpendiculat)
 
-    let end_cap = vec3.add([], position, vec3.scale([], direction, 0.1))
+    let end_cap = vec3.add([], position, vec3.scale([], direction, height * 0.3))
     vertices.push(end_cap)
     normals.push(direction)
 
@@ -90,8 +90,8 @@ export function init_algae(regl, resources, position) {
     let stack = []
 
 
-    let width = 0.1
-    let height = 0.5
+    let width = 0.01
+    let height = 0.05
     let direction = vec3.fromValues(0, 0, 1)
     let angle = random_between(0, 2 * Math.PI)
     let rotation = mat3.create()
@@ -127,7 +127,7 @@ export function init_algae(regl, resources, position) {
         switch (algae_string[i]) {
             case 'T':
                 // add a branch
-                new_geometry = draw_branch(vertices, faces, normals, position, direction, angle, width, height, first)
+                new_geometry = draw_branch(vertices, faces, normals, position, direction, angle, random_between(width * 0.99, width * 1.01), random_between(height * 0.99, height * 1.01), 0.1, first)
                 first = false
                 vertices = new_geometry.vertices
                 faces = new_geometry.faces
