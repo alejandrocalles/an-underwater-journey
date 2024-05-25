@@ -137,34 +137,33 @@ async function main() {
 	*/
 
 	// Select texture to show
-	let selected_tex = noise_textures[0];
+	let selected_tex = noise_textures;
 
 	const elem_variant_select = document.getElementById('variants');
 
-	noise_textures.forEach((ntex, idx) => {
-		const handler = () => {
-			selected_tex = ntex;
-			update_needed = true;
 
-			console.log(`Selected texture: ${ntex.name}`);
-		}
+	const handler = () => {
+		selected_tex = noise_textures;
+		update_needed = true;
 
-		const key = (idx+1).toString();
-		register_keyboard_action(key, handler);
+		console.log(`Selected texture: ${noise_textures.name}`);
+	}
 
-		if(!ntex.hidden) {
-			const entry = document.createElement('li');
-			entry.classList.add('button');
-			entry.textContent = ntex.name;
-			entry.addEventListener('click', handler);
-			elem_variant_select.appendChild(entry);
+	const key = (0+1).toString();
+	register_keyboard_action(key, handler);
 
-			const key_indicator = document.createElement('span')
-			key_indicator.classList.add('keyboard');
-			key_indicator.textContent = key
-			entry.appendChild(key_indicator);
-		}	
-	});
+	if(!noise_textures.hidden) {
+		const entry = document.createElement('li');
+		entry.classList.add('button');
+		entry.textContent = noise_textures.name;
+		entry.addEventListener('click', handler);
+		elem_variant_select.appendChild(entry);
+
+		const key_indicator = document.createElement('span')
+		key_indicator.classList.add('keyboard');
+		key_indicator.textContent = key
+		entry.appendChild(key_indicator);
+	}
 
 	// Show/hide overlay
 	register_keyboard_action('z', () => {

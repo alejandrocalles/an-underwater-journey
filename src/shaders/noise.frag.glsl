@@ -1,6 +1,8 @@
 // this version is needed for: indexing an array, const array, modulo %
 precision highp float;
 
+uniform sampler2D permSampler;
+uniform sampler2D gradPSampler;
 
 //=============================================================================
 //	Exercise code for "Introduction to Computer Graphics 2018"
@@ -417,180 +419,6 @@ float perlin3d(vec3 point) {
 }
 // ==============================================================
 
-// ==============================================================
-// 3d perlin from https://www.shadertoy.com/view/wsX3D7
-float modValue = 512.0;
-
-float permuteX(float x)
-{
-    float t = ((x * 67.0) + 71.0) * x;
-	return mod(t, modValue);
-}
-
-float permuteY(float x)
-{
-    float t = ((x * 73.0) + 83.0) * x;
-	return mod(t, modValue);
-}
-
-float permuteZ(float x)
-{
-    float t = ((x * 103.0) + 109.0) * x;
-	return mod(t, modValue);
-}
-
-float shiftX(float value)
-{
-    return fract(value * (1.0 / 73.0)) * 2.0 - 1.0;
-}
-
-float shiftY(float value)
-{
-    return fract(value * (1.0 / 69.0)) * 2.0 - 1.0;
-}
-
-float shiftZ(float value)
-{
-    return fract(value * (1.0 / 89.0)) * 2.0 - 1.0;
-}
-
-float taylorInvSqrt(float r)
-{
-	return 1.79284291400159 - 0.85373472095314 * r;
-}
-
-float smoothmix(float x, float y, float t)
-{
-	t = blending_weight_poly(t);
-    return y * t + x * (1.0 - t);
-}
-
-float perlinNoise(vec3 c)
-{
-    vec3 ci = floor(c.xyz);
-    vec3 cr = fract(c.xyz);
-    
-	// compute all corners of the cube
-    vec3 i000 = ci;
-	vec3 i001 = ci + vec3(0.0, 0.0, 1.0);
-	vec3 i010 = ci + vec3(0.0, 1.0, 0.0);
-	vec3 i011 = ci + vec3(0.0, 1.0, 1.0);
-	vec3 i100 = ci + vec3(1.0, 0.0, 0.0);
-	vec3 i101 = ci + vec3(1.0, 0.0, 1.0);
-	vec3 i110 = ci + vec3(1.0, 1.0, 0.0);
-	vec3 i111 = ci + vec3(1.0, 1.0, 1.0);
-    
-    i000 = mod(i000, modValue);
-    i001 = mod(i001, modValue);
-    i010 = mod(i010, modValue);
-    i011 = mod(i011, modValue);
-    i100 = mod(i100, modValue);
-    i101 = mod(i101, modValue);
-    i110 = mod(i110, modValue);
-    i111 = mod(i111, modValue);
-    
-    float rX000 = permuteX(permuteX(permuteX(i000.x) + i000.y) + i000.z);
-    float rX001 = permuteX(permuteX(permuteX(i001.x) + i001.y) + i001.z);
-    float rX010 = permuteX(permuteX(permuteX(i010.x) + i010.y) + i010.z);
-    float rX011 = permuteX(permuteX(permuteX(i011.x) + i011.y) + i011.z);
-    float rX100 = permuteX(permuteX(permuteX(i100.x) + i100.y) + i100.z);
-    float rX101 = permuteX(permuteX(permuteX(i101.x) + i101.y) + i101.z);
-    float rX110 = permuteX(permuteX(permuteX(i110.x) + i110.y) + i110.z);
-    float rX111 = permuteX(permuteX(permuteX(i111.x) + i111.y) + i111.z);
-    
-    float rY000 = permuteY(permuteY(permuteY(i000.x) + i000.y) + i000.z);
-    float rY001 = permuteY(permuteY(permuteY(i001.x) + i001.y) + i001.z);
-    float rY010 = permuteY(permuteY(permuteY(i010.x) + i010.y) + i010.z);
-    float rY011 = permuteY(permuteY(permuteY(i011.x) + i011.y) + i011.z);
-    float rY100 = permuteY(permuteY(permuteY(i100.x) + i100.y) + i100.z);
-    float rY101 = permuteY(permuteY(permuteY(i101.x) + i101.y) + i101.z);
-    float rY110 = permuteY(permuteY(permuteY(i110.x) + i110.y) + i110.z);
-    float rY111 = permuteY(permuteY(permuteY(i111.x) + i111.y) + i111.z);
-    
-    float rZ000 = permuteZ(permuteZ(permuteZ(i000.x) + i000.y) + i000.z);
-    float rZ001 = permuteZ(permuteZ(permuteZ(i001.x) + i001.y) + i001.z);
-    float rZ010 = permuteZ(permuteZ(permuteZ(i010.x) + i010.y) + i010.z);
-    float rZ011 = permuteZ(permuteZ(permuteZ(i011.x) + i011.y) + i011.z);
-    float rZ100 = permuteZ(permuteZ(permuteZ(i100.x) + i100.y) + i100.z);
-    float rZ101 = permuteZ(permuteZ(permuteZ(i101.x) + i101.y) + i101.z);
-    float rZ110 = permuteZ(permuteZ(permuteZ(i110.x) + i110.y) + i110.z);
-    float rZ111 = permuteZ(permuteZ(permuteZ(i111.x) + i111.y) + i111.z);
-    
-    float x000 = shiftX(rX000);
-    float x001 = shiftX(rX001);
-    float x010 = shiftX(rX010);
-    float x011 = shiftX(rX011);
-    float x100 = shiftX(rX100);
-    float x101 = shiftX(rX101);
-    float x110 = shiftX(rX110);
-    float x111 = shiftX(rX111);
-    
-    float y000 = shiftY(rY000);
-    float y001 = shiftY(rY001);
-    float y010 = shiftY(rY010);
-    float y011 = shiftY(rY011);
-    float y100 = shiftY(rY100);
-    float y101 = shiftY(rY101);
-    float y110 = shiftY(rY110);
-    float y111 = shiftY(rY111);
-    
-    float z000 = shiftZ(rZ000);
-    float z001 = shiftZ(rZ001);
-    float z010 = shiftZ(rZ010);
-    float z011 = shiftZ(rZ011);
-    float z100 = shiftZ(rZ100);
-    float z101 = shiftZ(rZ101);
-    float z110 = shiftZ(rZ110);
-    float z111 = shiftZ(rZ111);
-    
-	vec3 g000 = vec3(x000, y000, z000);
-	vec3 g001 = vec3(x001, y001, z001);
-	vec3 g010 = vec3(x010, y010, z010);
-	vec3 g011 = vec3(x011, y011, z011);
-	vec3 g100 = vec3(x100, y100, z100);
-	vec3 g101 = vec3(x101, y101, z101);
-	vec3 g110 = vec3(x110, y110, z110);
-	vec3 g111 = vec3(x111, y111, z111);
-     
-    float n000 = taylorInvSqrt(dot(g000, g000));
-    float n001 = taylorInvSqrt(dot(g001, g001));
-    float n010 = taylorInvSqrt(dot(g010, g010));
-    float n011 = taylorInvSqrt(dot(g011, g011));
-    float n100 = taylorInvSqrt(dot(g100, g100));
-    float n101 = taylorInvSqrt(dot(g101, g101));
-    float n110 = taylorInvSqrt(dot(g110, g110));
-    float n111 = taylorInvSqrt(dot(g111, g111));
-    
-    g000 *= n000;
-    g001 *= n001;
-    g010 *= n010;
-    g011 *= n011;
-    g100 *= n100;
-    g101 *= n101;
-    g110 *= n110;
-    g111 *= n111;
-    
-    float f000 = dot(g000, cr);
-	float f001 = dot(g100, cr - vec3(0.0, 0.0, 1.0));
-	float f010 = dot(g010, cr - vec3(0.0, 1.0, 0.0));
-	float f011 = dot(g110, cr - vec3(0.0, 1.0, 1.0));
-	float f100 = dot(g001, cr - vec3(1.0, 0.0, 0.0));
-	float f101 = dot(g101, cr - vec3(1.0, 0.0, 1.0));
-	float f110 = dot(g011, cr - vec3(1.0, 1.0, 0.0));
-	float f111 = dot(g111, cr - vec3(1.0, 1.0, 1.0));
-    
-    float fadeX0 = smoothmix(f000, f100, cr.x);
-    float fadeX1 = smoothmix(f010, f110, cr.x);
-    float fadeX2 = smoothmix(f001, f101, cr.x);
-    float fadeX3 = smoothmix(f011, f111, cr.x);
-    float fadeY0 = smoothmix(fadeX0, fadeX1, cr.y);
-    float fadeY1 = smoothmix(fadeX2, fadeX3, cr.y);
-    float fadeZ0 = smoothmix(fadeY0, fadeY1, cr.z);
-    
-    return fadeZ0;
-}
-// ==============================================================
-
 // 3d perlin from https://github.com/FarazzShaikh/glNoise/blob/master/src/Perlin.glsl
 
 vec4 _permute(vec4 x) { return mod(((x * 34.0) + 1.0) * x, 289.0); }
@@ -601,10 +429,8 @@ vec3 _fade(vec3 t) { return t * t * t * (t * (t * 6.0 - 15.0) + 10.0); }
 
 
 float gln_perlin(vec3 P) {
-  vec3 Pi0 = floor(P);        // Integer part for indexing
-  vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
-  Pi0 = mod(Pi0, 289.0);
-  Pi1 = mod(Pi1, 289.0);
+  vec3 Pi0 = floor(P);        
+  vec3 Pi1 = Pi0 + vec3(1.0);
   vec3 Pf0 = fract(P);        // Fractional part for interpolation
   vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0
   vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
@@ -671,15 +497,310 @@ float gln_perlin(vec3 P) {
   return 2.2 * n_xyz;
 }
 
+// from https://www.youtube.com/watch?v=TZFv493D7jo
+float pepe(vec3 point) {
+	float ab = perlin_noise(vec2(point.xy));
+	float bc = perlin_noise(vec2(point.yz));
+	float ac = perlin_noise(vec2(point.xz));
+
+	float ba = perlin_noise(vec2(point.yx));
+	float cb = perlin_noise(vec2(point.zy));
+	float ca = perlin_noise(vec2(point.zx));
+
+	float abc = ab + bc + ac + ba + cb + ac;
+	return abc / 6.;
+}
+
+/*
+float get_perm(float x){
+	return texture2D(permTexture, vec2(x / 255., 0.5)).a * 255.;
+}*/
+
+// method from https://github.com/motudev/3dperlinNoiseTut/blob/master/Assets/perlinNoise.cs
 
 
-vec3 tex_fbm_3d(vec2 point) {
+vec3 directions(float x) {
+	    if (x == 0.) { return vec3(1., 1., 0.); }
+		if (x == 1.) { return vec3(-1., 1., 0.); }
+        if (x == 2.) { return vec3(1., -1., 0.); }
+		if (x == 3.) { return vec3(-1., -1., 0.); }
+        if (x == 4.) { return vec3(1., 0., 1.); }
+        if (x == 5.) { return vec3(-1., 0., 1.); }
+        if (x == 6.) { return vec3(1., 0., -1.); }
+        if (x == 7.) { return vec3(-1., 0., -1.); }
+        if (x == 8.) { return vec3(0., 1., 1.); }
+        if (x == 9.) { return vec3(0., -1., 1.); }
+        if (x == 10.) { return vec3(0., 1., -1.); }
+        if (x == 11.) { return vec3(0., -1., -1.); }
 
-	vec3 point3d = vec3(point.x*1.8, (point.y - floor(point.y/96.) * 96.)*1.8, floor(point.y/96.)*1.8);
+		if (x == 12.) { return vec3(1., 1., 0.); }
+		if (x == 13.) { return vec3(-1., 1., 0.); }
+        if (x == 14.) { return vec3(0., -1., 1.); }
+        if (x == 15.) { return vec3(0., -1., -1.); }
+}
+/*
+float pipi(vec3 point) {
+	float permutationCount = 255.;
 
+	float directionCount = 15.;
+
+	float flooredPointX0 = floor(point.x);
+	float flooredPointY0 = floor(point.y);
+	float flooredPointZ0 = floor(point.z);
+
+	float distanceX0 = point.x - flooredPointX0;
+	float distanceY0 = point.y - flooredPointY0;
+	float distanceZ0 = point.z - flooredPointZ0;
+
+	float distanceX1 = distanceX0 - 1.;
+	float distanceY1 = distanceY0 - 1.;
+	float distanceZ1 = distanceZ0 - 1.;
+
+	flooredPointX0 = mod(flooredPointX0, permutationCount);
+	flooredPointY0 = mod(flooredPointY0, permutationCount);
+	flooredPointZ0 = mod(flooredPointZ0, permutationCount);
+
+	float flooredPointX1 = flooredPointX0 + 1.;
+	float flooredPointY1 = flooredPointY0 + 1.;
+	float flooredPointZ1 = flooredPointZ0 + 1.;
+
+	float permutationX0 = get_perm(flooredPointX0);
+	float permutationX1 = get_perm(flooredPointX1);
+
+	float permutationY00 = get_perm(permutationX0 + flooredPointY0);
+	float permutationY10 = get_perm(permutationX1 + flooredPointY0);
+	float permutationY01 = get_perm(permutationX0 + flooredPointY1);
+	float permutationY11 = get_perm(permutationX1 + flooredPointY1);
+
+	vec3 direction000 = directions(mod(get_perm(permutationY00 + flooredPointZ0), directionCount));
+	vec3 direction100 = directions(mod(get_perm(permutationY10 + flooredPointZ0), directionCount));
+	vec3 direction010 = directions(mod(get_perm(permutationY01 + flooredPointZ0), directionCount));
+	vec3 direction110 = directions(mod(get_perm(permutationY11 + flooredPointZ0), directionCount));
+	vec3 direction001 = directions(mod(get_perm(permutationY00 + flooredPointZ1), directionCount));
+	vec3 direction101 = directions(mod(get_perm(permutationY10 + flooredPointZ1), directionCount));
+	vec3 direction011 = directions(mod(get_perm(permutationY01 + flooredPointZ1), directionCount));
+	vec3 direction111 = directions(mod(get_perm(permutationY11 + flooredPointZ1), directionCount));
+
+	float value000 = dot(direction000, vec3(distanceX0, distanceY0, distanceZ0));
+	float value100 = dot(direction100, vec3(distanceX1, distanceY0, distanceZ0));
+	float value010 = dot(direction010, vec3(distanceX0, distanceY1, distanceZ0));
+	float value110 = dot(direction110, vec3(distanceX1, distanceY1, distanceZ0));
+	float value001 = dot(direction001, vec3(distanceX0, distanceY0, distanceZ1));
+	float value101 = dot(direction101, vec3(distanceX1, distanceY0, distanceZ1));
+	float value011 = dot(direction011, vec3(distanceX0, distanceY1, distanceZ1));
+	float value111 = dot(direction111, vec3(distanceX1, distanceY1, distanceZ1));
+
+	float smoothDistanceX = blending_weight_poly(distanceX0);
+	float smoothDistanceZ = blending_weight_poly(distanceZ0);
+	float smoothDistanceY = blending_weight_poly(distanceY0);
+
+	return mix(
+		mix(mix(value000, value100, smoothDistanceX), mix(value010, value110, smoothDistanceX), smoothDistanceY),
+		mix(mix(value001, value101, smoothDistanceX), mix(value011, value111, smoothDistanceX), smoothDistanceY),
+		smoothDistanceZ);
+}*/
+
+// bitwise or from https://gist.github.com/mattatz/70b96f8c57d4ba1ad2cd
+int or(int a, int b) {
+    int result = 0;
+    int n = 1;
+
+    for(int i = 0; i < 8; i++) {
+        if ((mod(float(a), 2.) == 1.) || (mod(float(b), 2.) == 1.)) {
+            result += n;
+        }
+        a = a / 2;
+        b = b / 2;
+        n = n * 2;
+        if(!(a > 0 || b > 0)) {
+            break;
+        }
+    }
+    return result;
+}
+int and(int a, int b) {
+    int result = 0;
+    int n = 1;
+
+    for(int i = 0; i < 8; i++) {
+        if ((mod(float(a), 2.) == 1.) && (mod(float(b), 2.) == 1.)) {
+            result += n;
+        }
+
+        a = a / 2;
+        b = b / 2;
+        n = n * 2;
+
+        if(!(a > 0 && b > 0)) {
+            break;
+        }
+    }
+    return result;
+}
+
+// ==============================================================
+
+// instead of having an array, pass a texture
+vec3 gradP(int index) {
+	float x = float(index) / 512.0;
+	return texture2D(gradPSampler, vec2(x, 0.5)).rgb;
+}
+
+float perm(int index) {
+	float x = float(index) / 512.0;
+	return texture2D(permSampler, vec2(x, 0.5)).a * 255.0;
+}
+
+// 3d perlin from https://github.com/josephg/noisejs/blob/master/perlin.js
+vec3 grad3(float x) {
+	if (x == 0.) return vec3(1,1,0);
+	if (x == 1.) return vec3(-1,1,0);
+	if (x == 2.) return vec3(1,-1,0);
+	if (x == 3.) return vec3(-1,-1,0);
+	if (x == 4.) return vec3(1,0,1);
+	if (x == 5.) return vec3(-1,0,1);
+	if (x == 6.) return vec3(1,0,-1);
+	if (x == 7.) return vec3(-1,0,-1);
+	if (x == 8.) return vec3(0,1,1);
+	if (x == 9.) return vec3(0,-1,1);
+	if (x == 10.) return vec3(0,1,-1);
+	if (x == 11.) return vec3(0,-1,-1);
+}
+
+float F2 = 0.5 * (sqrt(3.) - 1.);
+float G2 = (3. - sqrt(3.)) / 6.;
+float F3 = 1. / 3.;
+float G3 = 1. / 6.;
+
+float pedro(vec3 point) {
+	vec3 P = floor(point);
+	vec3 p = point - P;
+	float x = float(and(int(P.x), 255));
+	float y = float(and(int(P.y), 255));
+	float z = float(and(int(P.z), 255));
+
+	float n000 = dot(gradP(int(x + perm(int(y + perm(int(z)))))), vec3(p.x, p.y, p.z));
+	float n001 = dot(gradP(int(x + perm(int(y + perm(int(z + 1.)))))), vec3(p.x, p.y, p.z - 1.));
+	float n010 = dot(gradP(int(x + perm(int(y + 1. + perm(int(z)))))), vec3(p.x, p.y - 1., p.z));
+	float n011 = dot(gradP(int(x + perm(int(y + 1. + perm(int(z + 1.)))))), vec3(p.x, p.y - 1., p.z - 1.));
+	float n100 = dot(gradP(int(x + 1. + perm(int(y + perm(int(z)))))), vec3(p.x - 1., p.y, p.z));
+	float n101 = dot(gradP(int(x + 1. + perm(int(y + perm(int(z + 1.)))))), vec3(p.x - 1., p.y, p.z - 1.));
+	float n110 = dot(gradP(int(x + 1. + perm(int(y + 1. + perm(int(z)))))), vec3(p.x - 1., p.y - 1., p.z));
+	float n111 = dot(gradP(int(x + 1. + perm(int(y + 1. + perm(int(z + 1.)))))), vec3(p.x - 1., p.y - 1., p.z - 1.));
+
+	float u = blending_weight_poly(p.x);
+	float v = blending_weight_poly(p.y);
+	float w = blending_weight_poly(p.z);
+
+	return mix(
+		mix(
+			mix(n000, n100, u),
+			mix(n001, n101, u),
+			w),
+		mix(
+			mix(n010, n110, u),
+			mix(n011, n111, u),
+			w),
+		v);
+}
+
+// ==============================================================
+// 3D Perlin noise from ChatGpt
+
+vec4 permute(vec4 x) {
+    return mod(((x*34.0)+1.0)*x, 289.0);
+}
+
+vec4 taylorInvSqrt(vec4 r) {
+    return 1.79284291400159 - 0.85373472095314 * r;
+}
+
+vec3 fade(vec3 t) {
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+// Classic Perlin noise
+float haha(vec3 P) {
+    vec3 Pi0 = floor(P); // Integer part for indexing
+    vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
+    Pi0 = mod(Pi0, 289.0);
+    Pi1 = mod(Pi1, 289.0);
+    vec3 Pf0 = fract(P); // Fractional part for interpolation
+    vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0
+    vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+    vec4 iy = vec4(Pi0.y, Pi0.y, Pi1.y, Pi1.y);
+    vec4 iz0 = vec4(Pi0.z);
+    vec4 iz1 = vec4(Pi1.z);
+
+    vec4 ixy = permute(permute(ix) + iy);
+    vec4 ixy0 = permute(ixy + iz0);
+    vec4 ixy1 = permute(ixy + iz1);
+
+    vec4 gx0 = ixy0 * (1.0 / 7.0);
+    vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;
+    gx0 = fract(gx0);
+    vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+    vec4 sz0 = step(gz0, vec4(0.0));
+    gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+    gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+
+    vec4 gx1 = ixy1 * (1.0 / 7.0);
+    vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;
+    gx1 = fract(gx1);
+    vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+    vec4 sz1 = step(gz1, vec4(0.0));
+    gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+    gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+
+    vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+    vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+    vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+    vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+    vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+    vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+    vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+    vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+
+    vec4 norm0 = taylorInvSqrt(vec4(dot(g000,g000), dot(g010,g010), dot(g100,g100), dot(g110,g110)));
+    g000 *= norm0.x;
+    g010 *= norm0.y;
+    g100 *= norm0.z;
+    g110 *= norm0.w;
+    vec4 norm1 = taylorInvSqrt(vec4(dot(g001,g001), dot(g011,g011), dot(g101,g101), dot(g111,g111)));
+    g001 *= norm1.x;
+    g011 *= norm1.y;
+    g101 *= norm1.z;
+    g111 *= norm1.w;
+
+    float n000 = dot(g000, Pf0);
+    float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+    float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+    float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+    float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+    float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+    float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+    float n111 = dot(g111, Pf1);
+
+    vec3 fade_xyz = fade(Pf0);
+    vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+    vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+    float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x); 
+    return 2.2 * n_xyz;
+}
+
+vec3 tex_fbm_3d(vec3 point) {
+
+	//vec3 point3d = vec3(point.x*1.8, (point.y - floor(point.y/100.) * 100.)*1.8, floor(point.y/100.)*1.8);
+	vec3 point3d = vec3(point.x*1.8, point.y*1.8, point.z * 0.05);
 	float result = 0.;
 
-	result = (gln_perlin(point3d) * 0.25) + 0.5;
+	for (int i = 0; i < num_octaves; i++) {
+		result += pow(ampl_multiplier, float(i)) * haha(point3d * pow(freq_multiplier, float(i)));
+	}
+
+	result = (result * 0.25) + 0.5;
+
+	result = (haha(point3d) * 0.25) + 0.5;
 
 	if (result > 0.5) {
 		result = 1.;

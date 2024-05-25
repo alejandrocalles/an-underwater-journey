@@ -28,14 +28,13 @@ export function vertex_interpolate(isovalue, p1, p2, v1, v2, shrink) {
 export function compute_cube(cube) {
     let cubeindex = 0
     let vert_list = []
-    let ntriangle = 0
-    let triangles = {vert_index: [], triangle: []}
+    let triangles = []
 
     for (let i = 0; i < 8; i++) {
-        if (cube.val[i] < 0) cubeindex |= 1 << i
+        if (cube.val[i] < 0.5) cubeindex |= 1 << i
     }
 
-    if (edge_table[cubeindex] == 0) return triangles
+    if (edge_table[cubeindex] == 0) return {triangles: [], vertices: [], success: false}
 
     if (edge_table[cubeindex] & 1) {
         vert_list[0] = vertex_interpolate(0, cube.vert[0], cube.vert[1], cube.val[0], cube.val[1])
@@ -86,17 +85,14 @@ export function compute_cube(cube) {
     }
 
     for (let i = 0; triTable[cubeindex][i] != -1; i += 3) {
-        triangles.triangle[ntriangle] = [
-                vert_list[triTable[cubeindex][i]],
-                vert_list[triTable[cubeindex][i + 1]],
-                vert_list[triTable[cubeindex][i + 2]]
-            ]
-        triangles.vert_index[ntriangle] = 
-        ntriangle++;
-        
+        triangles.push([
+                triTable[cubeindex][i],
+                triTable[cubeindex][i + 1],
+                triTable[cubeindex][i + 2]
+            ])
     }
 
-    return triangles
+    return {triangles: triangles, vertices: vert_list, success: true}
 }
 export function index_to_v_index(index, gx, gy, gz, width, height) {
     let v_index = 0

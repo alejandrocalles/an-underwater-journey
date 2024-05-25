@@ -146,8 +146,8 @@ async function main() {
 			vec3.sub(cam_target, cam_target, camera_position)
 			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
 
-			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
-			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
+			let xrot = event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = event.movementY * 0.001 * Math.sin(cam_angle_z)
 
 			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
 			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
@@ -167,7 +167,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Actors
 	---------------------------------------------------------------*/
-
+	/*
 	const noise_textures = init_noise(regl, resources)
 	
 	const texture_fbm_3d = (() => {
@@ -177,37 +177,42 @@ async function main() {
 				return t
 			}
 		}
-	})()
+	})()*/
 
 	const fog_args = {
 		fog_color: [0., 0., 1.],
-		closeFarThreshold: [0., 3.],
-		minMaxIntensity: [0.1, 0.7],
+		closeFarThreshold: [10., 20.],
+		minMaxIntensity: [0.05, 0.9],
 		useFog: true,
 	}
 
 	let terrain_width = 96
 	let terrain_height = 96
 	let terrain_depth = 96
-	/*
+
+	let resolution = 0.5
+	terrain_depth *= resolution
+	terrain_width *= resolution
+	terrain_height *= resolution
+
+
 	let textures = []
 	for (let i = 0; i < terrain_depth; i++) {
-		let texture = (() => {
-			for(const t of noise_textures) {
-				//if(t.name === 'FBM') {
-				if(t.name === 'FBM_3d') {
-					return t
-				}
-			}
-		})()
-		texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [0, -1 + i * 2 / terrain_depth]})
-		textures.push(texture)
-	}*/
+		let texture = init_noise(regl, resources)
+		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
+		textures.push(tex)
+	}
+	const terrain_actor = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
 
-	texture_fbm_3d.draw_texture_to_buffer({width: terrain_width, height: terrain_height * terrain_depth, mouse_offset: [0, -1]})
-
-	const terrain_actor = init_terrain(regl, resources, texture_fbm_3d.get_buffer(), terrain_depth)
-
+	/*
+	let textures2 = []
+	for (let i = 0; i < terrain_depth; i++) {
+		let texture = init_noise(regl, resources)
+		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10 - terrain_width, -10], i: i})
+		textures2.push(tex)
+	}
+	const terrain_actor2 = init_terrain(regl, resources, textures2, {x: terrain_width - 1, y: 0, z: 0})
+	*/
 
 	/*
 		UI
@@ -387,6 +392,7 @@ async function main() {
 			
 			vec3.copy(cam_pos, camera_position)
 			terrain_actor.draw(scene_info, fog_args)
+			//terrain_actor2.draw(scene_info, fog_args)
 		}
 
 // 		debug_text.textContent = `
