@@ -96,7 +96,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let camera_position = [-1, -1, 5]
+	let camera_position = [-5, -5, 5]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -104,7 +104,7 @@ async function main() {
 	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
-	let cam_target = [0, 0, 0]
+	let cam_target = vec3.normalize(vec3.create(), vec3.negate([], camera_position))
 
 	let cam_speed = 1
 
@@ -151,8 +151,8 @@ async function main() {
 			vec3.sub(cam_target, cam_target, camera_position)
 			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
 
-			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
-			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
+			let xrot = event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = event.movementY * 0.001 * Math.sin(cam_angle_z)
 
 			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
 			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
@@ -187,33 +187,21 @@ async function main() {
 		useFog: true,
 	}
 
-	let terrain_width = 150
-	let terrain_height = 150
+	let terrain_width = 180
+	let terrain_height = 180
 	let terrain_depth = 96
 
-	let resolution = 1
-	terrain_depth *= resolution
-	terrain_width *= resolution
-	terrain_height *= resolution
-
-
+	/*
 	let textures = []
 	for (let i = 0; i < terrain_depth; i++) {
 		let texture = init_noise(regl, resources)
 		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
 		textures.push(tex)
 	}
-	const terrain_actor = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
-
-	/*
-	let textures2 = []
-	for (let i = 0; i < terrain_depth; i++) {
-		let texture = init_noise(regl, resources)
-		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10 - terrain_width, -10], i: i})
-		textures2.push(tex)
-	}
-	const terrain_actor2 = init_terrain(regl, resources, textures2, {x: terrain_width - 1, y: 0, z: 0})
-	*/
+	const ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
+	const terrain_actor = ter.terrain
+	const algae = ter.algae*/
+	
 
 	/*
 		UI
@@ -360,6 +348,9 @@ async function main() {
 
 	const light_position_cam = [0, 0, 0, 0]
 
+
+	const a = init_algae(regl, resources, [-1, -1, 0])
+
 	regl.frame((frame) => {
 		if(update_needed) {
 			update_needed = false // do this *before* running the drawing code so we don't keep updating if drawing throws an error.
@@ -387,8 +378,12 @@ async function main() {
 			
 			
 			vec3.copy(cam_pos, camera_position)
+			/*
 			terrain_actor.draw(scene_info, fog_args)
-			//terrain_actor2.draw(scene_info, fog_args)
+			for (let i = 0; i < algae.length; i++) {
+				algae[i].draw(scene_info, fog_args)
+			}*/
+			a.draw(scene_info, fog_args)
 		}
 
 // 		debug_text.textContent = `

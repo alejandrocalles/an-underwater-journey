@@ -14,6 +14,7 @@ uniform vec2 closeFarThreshold;
 uniform vec2 minMaxIntensity;
 uniform bool useFog;
 
+const float terrain_water_level    = 90.5;
 const vec3  light_color = vec3(1.0, 0.941, 0.898);
 // Small perturbation to prevent "z-fighting" on the water on some machines...
 const vec3  terrain_color_mountain = vec3(0.8, 0.5, 0.4);
@@ -59,7 +60,7 @@ void main()
 
 	vec3 color = clamp(ambient + diffuse + specular, 0.0, 1.0);
 
-    if (useFog){
+    if (useFog && height < terrain_water_level - 0.01){
 		float fogFactor = clamp(pow(dist_to_view - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), minMaxIntensity.x, minMaxIntensity.y);
 		color = mix(color, fog_color, fogFactor);
 	}

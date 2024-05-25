@@ -5,7 +5,7 @@ import {algae_string_generator, random_between} from "./l-system.js"
 
 
 function draw_branch(vertices, faces, normals, position, direction, angle, width, height, first = false) {
-    let resolution = 30
+    let resolution = 7
     let steps = 2 * Math.PI / resolution
 
     if (first) {
@@ -58,7 +58,7 @@ function draw_branch(vertices, faces, normals, position, direction, angle, width
 }
 
 function draw_leaf(vertices, faces, normals, position, direction, angle, width, height) {
-    let resolution = 30
+    let resolution = 7
 
     let perpendiculat = vec3.rotateX([], direction, [0, 0, 0], Math.PI/2)
     perpendiculat = vec3.normalize(perpendiculat, perpendiculat)
@@ -80,18 +80,17 @@ function draw_leaf(vertices, faces, normals, position, direction, angle, width, 
 
 
 export function init_algae(regl, resources, position) {
-
     let vertices = []
     let normals = []
     let faces = []
 
-    const algae_string = algae_string_generator(random_between(4, 10))
+    const algae_string = algae_string_generator(random_between(5, 10))
 
     let stack = []
 
 
-    let width = 0.01
-    let height = 0.05
+    let width = 0.08
+    let height = 0.4
     let direction = vec3.fromValues(0, 0, 1)
     let angle = random_between(0, 2 * Math.PI)
     let rotation = mat3.create()

@@ -3,6 +3,9 @@ import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
 import {mat4_matmul_many} from "./icg_math.js"
 import {compute_cube, index_to_v_index, vertex_interpolate} from "./Marching_cubes_functions.js"
 import { triTable, edge_table } from "./marching_cubes_tables.js"
+import { random_between } from "./l-system.js"
+import { init_algae } from "./algae.js"
+
 
 class BufferData {
 
@@ -22,7 +25,6 @@ class BufferData {
 		} else {
 			this.scale = 1.
 		}
-
 	}
 
 	get(x, y, z) {
@@ -59,7 +61,7 @@ function get_vertex_from_edge(edge_number) {
 }
 
 
-function terrain_build_mesh(height_map, offset={x: 0, y: 0, z: 0}) {
+function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 0}) {
 	const grid_width = height_map.width
 	const grid_height = height_map.height
 	const grid_depth = height_map.depth
@@ -73,6 +75,7 @@ function terrain_build_mesh(height_map, offset={x: 0, y: 0, z: 0}) {
 	const vertices = []
 	const normals = []
 	const faces = []
+	const algae = []
 
 	// create a flat surface of water
 	for (let x = offset.x; x < grid_width_; x++) {
@@ -95,17 +98,16 @@ function terrain_build_mesh(height_map, offset={x: 0, y: 0, z: 0}) {
 		}
 	}
 
-	console.log("water done")
 	// create the roof of the terrain
 	for (let y = offset.y; y < grid_height_; y++) {
 		for (let x = offset.x; x < grid_width_; x++) {
 			let gd = grid_depth - 1
 
 			let base = vertices.length
-			let val1 = height_map.get(x, y, gd)
-			let val2 = height_map.get(x + 1, y, gd)
-			let val3 = height_map.get(x, y + 1, gd)
-			let val4 = height_map.get(x + 1, y + 1, gd)
+			let val1 = height_map.get(x - offset.x, y - offset.y, gd)
+			let val2 = height_map.get(x - offset.x + 1, y - offset.y, gd)
+			let val3 = height_map.get(x - offset.x, y - offset.y + 1, gd)
+			let val4 = height_map.get(x - offset.x + 1, y - offset.y + 1, gd)
 
 			if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5 && val4 < 0.5) {
 				vertices.push([x, y, gd])
@@ -158,7 +160,6 @@ function terrain_build_mesh(height_map, offset={x: 0, y: 0, z: 0}) {
 			}
 		}
 	}
-	console.log("roof done")
 
 	/*
 	for (let z = offset.z; z < grid_depth_; z++) {
@@ -300,23 +301,51 @@ function terrain_build_mesh(height_map, offset={x: 0, y: 0, z: 0}) {
 						off + i * 3 + 2,
 					]
 					faces.push(f)
+
+					// add algae randomly if terrain is flat enough
+					let n = vec3.clone(normal)
+					let v1 = vec3.clone(vertices[off + i * 3])
+					let v2 = vec3.clone(vertices[off + i * 3 + 1])
+					let v3 = vec3.clone(vertices[off + i * 3 + 2])
+					let angle_with_vertical = vec3.dot(n, [0, 0, 1])
+					if (angle_with_vertical > 0.5 && random_between(0, 1) < 0.01){
+						let rand1 = random_between(0, 1)
+						let rand2 = random_between(0, 1)
+						angle_with_vertical = (angle_with_vertical - 0.1)**4
+
+						if (rand1 < angle_with_vertical && rand2 < 0.4) {
+							algae.push(init_algae(regl, resources, v1))
+						}
+						if (rand1 < angle_with_vertical && rand2 < 0.7 && rand2 > 0.3) {
+							algae.push(init_algae(regl, resources, v2))
+						}
+						if (rand1 < angle_with_vertical && rand2 > 0.6) {
+							algae.push(init_algae(regl, resources, v3))
+						}
+						console.log("algae")
+					}
 				}
 			}
 		}
 	}
 
-	console.log(vertices, normals, faces)
-	return {
+	console.log(vertices, normals, faces, algae)
+	return {terrain: {
 		vertex_positions: vertices,
 		vertex_normals: normals,
 		faces: faces,
+		},
+		algae: algae
 	}
 }
 
 
 export function init_terrain(regl, resources, height_map_buffer, offset) {
 	console.log(offset)
-	const terrain_mesh = terrain_build_mesh(new BufferData(regl, height_map_buffer), offset)
+
+	const res = terrain_build_mesh(new BufferData(regl, height_map_buffer), regl, resources, offset)
+	const terrain_mesh = res.terrain
+	const algae = res.algae
 
 	const pipeline_draw_terrain = regl({
 		attributes: {
@@ -373,5 +402,5 @@ export function init_terrain(regl, resources, height_map_buffer, offset) {
 		}
 	}
 
-	return new TerrainActor()
+	return {terrain: new TerrainActor(), algae: algae}
 }

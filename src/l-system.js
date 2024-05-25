@@ -3,26 +3,60 @@ export function random_between(min, max) {
     return Math.random() * (max - min) + min
 }
 
+/*
+    controls are:
+    - T: move forward
+    - +: decrease size
+    - -: increase size
+    - ^: pitch up
+    - &: pitch down
+    - /: roll right
+    - \: roll left
+    - |: turn around
+*/
+
+
+// grow in height with few branches
 function rule_A() {
-    if (random_between(0, 1) < 0.5) {
-        return '||^&/\\TAB[&&|B][//+B]'
+    let s = 'T|&'
+    r = random_between(1, 5)
+    for (let i = 0; i < r; i++) {
+        if (random_between(0, 1) < 0.5) {
+            s.concat('[|/TB]')
+        }
+        else if (random_between(0, 1) < 0.7) {
+            s.concat('[|^\\B]')
+        }
+        else {
+            s.concat('[|&A]')
+        }
     }
-    return '||^&/\\T[//+B][|||&^\\\\//A]B'
 }
 
+// very bushy with many branches
 function rule_B() {
-    if (random_between(0, 1) < 0.5) {
-        return 'T+[//T^C][\\\\^+B]'
+    if (random_between(0, 1) < 0.8) {
+        return '+[//T^C]T[&\\|+B]'
     }
-    return 'T[//+B&][T\\^C]'
+    return 'T|&[//+B]^/\\A'
 }
 
 function rule_C() {
-    return '^&^/\\F'
+    if (random_between(0, 1) < 0.01) {
+        return '^\\|+B|/[A]'
+    }
+    return '^&^/\\++TF'
+}
+
+function get_string() {
+    if (random_between(0, 1) < 0.5) {
+        return 'T[A][B]'
+    }
+    return 'TBT|/|^TA'
 }
 
 export function algae_string_generator(iterations) {
-    const initial_string = 'T[A]'
+    const initial_string = get_string()
     let a = rule_A()
     let b = rule_B()
     let c = rule_C()
@@ -45,6 +79,7 @@ function generate_string(initial_string, rules, iterations) {
                 return char
             }
         }).join('')
+        console.log(initial_string)
     }
 
     return initial_string
