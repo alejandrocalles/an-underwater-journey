@@ -154,3 +154,4 @@ export function register_slider_with_dependency(slider_id1, slider_id2, func) {
 		}
 	})
 }
+

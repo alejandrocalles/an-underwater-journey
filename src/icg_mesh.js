@@ -138,3 +138,42 @@ export async function icg_mesh_load_obj(regl_instance, url, material_colors_by_n
 	return mesh_with_our_names;
 }
 
+// understood the .obj file format thanks to https://all3dp.com/2/obj-file-format-simply-explained/
+export async function load_mesh(path){
+	let mesh = {
+		vertices: [],
+		normals: [],
+		faces: [],
+	}
+	
+	let response = await (await fetch(path)).text()
+
+	const lines = response.split('\n')
+	const vertices = []
+	const normals = []
+	const faces = []
+	for (const line of lines){
+		const parts = line.split(' ')
+		if (parts[0] === 'v'){
+			vertices.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])])
+		}
+		if (parts[0] === 'vn'){
+			normals.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])])
+		}
+		if (parts[0] === 'f'){
+			const face = []
+			for (let i = 1; i < parts.length; i++){
+				const vertex = parts[i].split('/')
+				face.push(parseInt(vertex[0]) - 1)
+			}
+			faces.push(face)
+		}
+	}
+
+	mesh.vertices = vertices
+	mesh.normals = normals
+	mesh.faces = faces
+	
+	return mesh
+}
+

@@ -6,9 +6,11 @@ import {deg_to_rad, mat4_to_string, vec_to_string, mat4_matmul_many} from "./icg
 
 import {init_noise} from "./noise.js"
 import {init_terrain} from "./terrain.js"
+import {init_algae} from "./algae.js"
 
 import { hexToRgb } from "./utils.js"
 import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
+import { load_mesh } from "./icg_mesh.js"
 
 
 async function main() {
@@ -78,6 +80,9 @@ async function main() {
 		"buffer_to_screen.vert.glsl",
 		"buffer_to_screen.frag.glsl",
 
+		"mesh.vert.glsl",
+		"mesh.frag.glsl",
+
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)
 	});
@@ -91,7 +96,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let camera_position = [-1, -1, 0]
+	let camera_position = [-1, -1, 5]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -146,17 +151,13 @@ async function main() {
 			vec3.sub(cam_target, cam_target, camera_position)
 			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
 
-			let xrot = event.movementY * 0.001 * Math.cos(cam_angle_z)
-			let yrot = event.movementY * 0.001 * Math.sin(cam_angle_z)
+			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
 
 			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
 			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
 
 			vec3.add(cam_target, cam_target, camera_position)
-
-			if (direction){
-				console.log(vec3.normalize([], vec3.sub(vec3.create(), cam_target, camera_position)))
-			}
 
 			update_cam_transform()
 			update_needed = true
@@ -220,7 +221,6 @@ async function main() {
 	register_keyboard_action('z', () => {
 		debug_overlay.classList.toggle('hide')
 	})
-
 
 
 	register_keyboard_action('w', () => {
@@ -292,10 +292,6 @@ async function main() {
 	register_keyboard_action('control', () => {
 		cam_speed = (cam_speed === 0.2) ? 1 : 0.2
 	})
-	register_keyboard_action("l", () => {
-		direction = !direction
-	})
-
 
 	function activate_preset_view() {
 		cam_angle_z = -1.0
