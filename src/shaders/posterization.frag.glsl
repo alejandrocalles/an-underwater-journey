@@ -3,7 +3,7 @@ precision highp float;
 uniform sampler2D texture;
 varying vec2 uv;
 
-#define LEVELS 13.
+#define LEVELS 10.
 
 void main() {
     vec3 color          = texture2D(texture, uv).xyz;

@@ -45,7 +45,7 @@ void main()
 	 		shininess = 2.
 	*/
 	vec3 material_color = vec3(0.0);
-	float shininess = 1.;
+	float shininess = 0.;
 
 	if (abs(height - terrain_water_level) < 0.1) {
 		material_color = terrain_color_water;

@@ -5,117 +5,17 @@ import {deg_to_rad, mat4_to_string, vec_to_string, mat4_matmul_many} from "./icg
 import {DOM_loaded_promise, load_text, register_button_with_hotkey, register_keyboard_action} from "./icg_web.js"
 
 import {init_ptextures} from "./ptextures.js"
+import {init_noise} from "./noise.js"
+import { getBezierView } from "./bezier.js"
 
-const mesh_quad_2d = {
-	position: [
-		// 4 vertices with 2 coordinates each
-		[-1, -1],
-		[1, -1],
-		[1, 1],
-		[-1, 1],
-	],
-	faces: [
-		[0, 1, 2], // top right
-		[0, 2, 3], // bottom left
-	],
-}
-
-function init_noise(regl, resources) {
-
-	// shader implementing all noise functions
-	const noise_library_code = resources['shaders/noise.frag.glsl']
-	
-	// shared buffer to which the texture are rendered
-	const noise_buffer = regl.framebuffer({
-		width: 768,
-		height: 768,
-		colorFormat: 'rgba',
-		colorType: 'float',
-		stencil: false,
-		depth: false,
-		mag: 'linear',
-		min: 'linear', 
-	})
-
-	const pipeline_generate_texture = regl({
-		attributes: {position: mesh_quad_2d.position},
-		elements: mesh_quad_2d.faces,
-		
-		uniforms: {
-			viewer_position: regl.prop('viewer_position'),
-			viewer_scale:    regl.prop('viewer_scale'),
-		},
-				
-		vert: resources['shaders/display.vert.glsl'],
-		frag: regl.prop('shader_frag'),
-
-		framebuffer: noise_buffer,
-	})
-
-	const pipeline_draw_buffer_to_screen = regl({
-		attributes: {position: mesh_quad_2d.position},
-		elements: mesh_quad_2d.faces,
-		uniforms: {
-			buffer_to_draw: noise_buffer,
-		},
-		vert: resources['shaders/buffer_to_screen.vert.glsl'],
-		frag: resources['shaders/buffer_to_screen.frag.glsl'],
-	})
-
-	class NoiseTexture {
-		constructor(name, shader_func_name, hidden) {
-			this.name = name
-			this.shader_func_name = shader_func_name
-			this.shader_frag = this.generate_frag_shader()
-			this.hidden = hidden
-		}
-
-		generate_frag_shader() {
-			return `${noise_library_code}
-		
-// --------------
-			
-varying vec2 v2f_tex_coords;
-
-void main() {
-	vec3 color = ${this.shader_func_name}(v2f_tex_coords);
-	gl_FragColor = vec4(color, 1.0);
-} 
-`;		
-		}
-
-		get_buffer() {
-			return noise_buffer
-		}
-
-		draw_texture_to_buffer({mouse_offset = [0, 0], zoom_factor = 1.0, width = 768, height = 768}) {
-			// adjust the buffer size to the desired value
-			if (noise_buffer.width != width || noise_buffer.height != height) {
-				noise_buffer.resize(width, height)
-			}
-
-			regl.clear({
-				framebuffer: noise_buffer,
-				color: [0, 0, 0, 1], 
-			})
-
-			pipeline_generate_texture({
-				shader_frag: this.shader_frag,
-				viewer_position: vec2.negate([0, 0], mouse_offset),
-				viewer_scale: zoom_factor,
-			})
-			
-			return noise_buffer
-		}
-
-		draw_buffer_to_screen() {
-			pipeline_draw_buffer_to_screen()
-		}
-	}
-	return new NoiseTexture('FBM_for_terrain', 'tex_fbm_for_terrain', true);
-}
-
-
+const PRESET_PATHS = [
+	[
+		[-0.3, 0.5, -.1],
+		[-0.1, -0.1, 1.],
+		[0.3, 0.1, .3],
+		[0.5, -0.5, .1],
+	]
+]
 
 class BufferData {
 
@@ -175,10 +75,6 @@ function terrain_build_mesh(height_map) {
 				elevation = WATER_LEVEL
 				normals[idx] = [0, 0, 1]
 			}
-			/*
-			elevation = WATER_LEVEL
-			normals[idx] = [0, 0, 1]
-			*/
 
 			vertices[idx] = [gx / grid_width - 0.5, gy / grid_height - 0.5, elevation]
 		}
@@ -259,7 +155,6 @@ function init_terrain(regl, resources, height_map_buffer) {
 
 	return new TerrainActor()
 }
-
 
 
 
@@ -410,39 +305,29 @@ async function main() {
 	activate_preset_view()
 	register_button_with_hotkey('btn-preset-view', '1', activate_preset_view)
 
-	/*---------------------------------------------------------------
-		Main FrameBuffer
-	---------------------------------------------------------------*/
-	// The proper size for the following buffer will be given by the frame render
-	const fbo = regl.framebuffer({
-		color: regl.texture({
-			width: 1,
-			height: 1,
-			wrap: 'clamp'
- 		}),
-  		depth: true,
+	let automatic_camera = false
+	register_keyboard_action('b', () => {
+		automatic_camera = !automatic_camera
+		update_needed = true
 	})
-
-	// Draw the buffer to the screen
-	const draw_fbo_to_screen = regl({
-		attributes: {
-			position: [ -4, -4, 4, -4, 0, 4 ],
-		},
-		vert: resources['shaders/buffer_to_screen.vert.glsl'],
-		frag: resources['shaders/buffer_to_screen.frag.glsl'],
-		uniforms: {
-			buffer_to_draw: () => fbo,
-		},
-		depth: { enable : false },
-		count: 3,
+	let lookAtOrigin = false
+	register_keyboard_action('c', () => {
+		lookAtOrigin = !lookAtOrigin
 	})
-
 	/*---------------------------------------------------------------
 		Actors
 	---------------------------------------------------------------*/
 
 	// TERRAIN GENERATION
-	const texture_fbm = init_noise(regl, resources)
+	const noise_textures = init_noise(regl, resources)
+
+	const texture_fbm = (() => {
+		for(const t of noise_textures) {
+			if(t.name === 'FBM_for_terrain') {
+				return t
+			}
+		}
+	})()
 
 	texture_fbm.draw_texture_to_buffer({width: 96, height: 96, mouse_offset: [-12.24, 8.15]})
 
@@ -473,6 +358,32 @@ async function main() {
 		count: 3,
 	})
 
+	/*---------------------------------------------------------------
+		Main FrameBuffer
+	---------------------------------------------------------------*/
+	// The proper size for the following buffer will be given by the frame render
+	const fbo = regl.framebuffer({
+		color: regl.texture({
+			width: 1,
+			height: 1,
+			wrap: 'clamp'
+ 		}),
+  		depth: true,
+	})
+
+	// Draw the buffer to the screen
+	const draw_fbo_to_screen = regl({
+		attributes: {
+			position: [ -4, -4, 4, -4, 0, 4 ],
+		},
+		vert: resources['shaders/buffer_to_screen.vert.glsl'],
+		frag: resources['shaders/buffer_to_screen.frag.glsl'],
+		uniforms: {
+			buffer_to_draw: () => fbo,
+		},
+		depth: { enable : false },
+		count: 3,
+	})
 
 	/*---------------------------------------------------------------
 		Frame render
@@ -494,8 +405,22 @@ async function main() {
 		*/
 		regl.clear({color: [0.0, 0.0, 0.0, 1.0], depth: 1, framebuffer: fbo})
 		fbo.resize(frame.framebufferWidth, frame.framebufferHeight)
-
-		if(update_needed) {
+		if (automatic_camera) {
+			mat4.perspective(mat_projection,
+				deg_to_rad * 60, // fov y
+				frame.framebufferWidth / frame.framebufferHeight, // aspect ratio
+				0.01, // near
+				100, // far
+			)
+			const time = 0.005 * (frame.tick % 200)
+			const bezier_view = getBezierView(
+				...PRESET_PATHS[0],
+				time,
+				lookAtOrigin
+			)
+			mat4.copy(mat_view, bezier_view)
+			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
+		} else if(update_needed) {
 			update_needed = false // do this *before* running the drawing code so we don't keep updating if drawing throws an error.
 			mat4.perspective(mat_projection,
 				deg_to_rad * 60, // fov y
@@ -536,7 +461,7 @@ async function main() {
 		} else {
 			draw_fbo_to_screen()
 		}
-		//txcel.draw_buffer_to_screen()
+		//texture_cel.draw_buffer_to_screen()
 
 // 		debug_text.textContent = `
 // Hello! Sim time is ${sim_time.toFixed(2)} s
