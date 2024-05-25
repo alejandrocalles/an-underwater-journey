@@ -791,7 +791,7 @@ float haha(vec3 P) {
 vec3 tex_fbm_3d(vec3 point) {
 
 	//vec3 point3d = vec3(point.x*1.8, (point.y - floor(point.y/100.) * 100.)*1.8, floor(point.y/100.)*1.8);
-	vec3 point3d = vec3(point.x*1.8, point.y*1.8, point.z * 0.05);
+	vec3 point3d = vec3(point.x*1.8, point.y*1.8, point.z * 0.03);
 	float result = 0.;
 
 	for (int i = 0; i < num_octaves; i++) {

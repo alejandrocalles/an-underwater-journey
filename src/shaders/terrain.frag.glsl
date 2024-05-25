@@ -75,7 +75,7 @@ void main()
 
 	vec3 color = clamp(ambient + diffuse + specular, 0.0, 1.0);
 
-	if (useFog && height < terrain_water_level){
+	if (useFog && height < terrain_water_level - 0.01){
 		float fogFactor = clamp(pow(dist_to_view - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), minMaxIntensity.x, minMaxIntensity.y);
 		color = mix(color, fog_color, fogFactor);
 	}

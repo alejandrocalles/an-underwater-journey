@@ -186,11 +186,11 @@ async function main() {
 		useFog: true,
 	}
 
-	let terrain_width = 96
-	let terrain_height = 96
+	let terrain_width = 150
+	let terrain_height = 150
 	let terrain_depth = 96
 
-	let resolution = 0.5
+	let resolution = 1
 	terrain_depth *= resolution
 	terrain_width *= resolution
 	terrain_height *= resolution
