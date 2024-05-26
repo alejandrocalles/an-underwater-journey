@@ -191,7 +191,6 @@ async function main() {
 	let terrain_height = 180
 	let terrain_depth = 96
 
-	/*
 	let textures = []
 	for (let i = 0; i < terrain_depth; i++) {
 		let texture = init_noise(regl, resources)
@@ -200,7 +199,7 @@ async function main() {
 	}
 	const ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
 	const terrain_actor = ter.terrain
-	const algae = ter.algae*/
+	const algae = ter.algae
 	
 
 	/*
@@ -348,9 +347,6 @@ async function main() {
 
 	const light_position_cam = [0, 0, 0, 0]
 
-
-	const a = init_algae(regl, resources, [-1, -1, 0])
-
 	regl.frame((frame) => {
 		if(update_needed) {
 			update_needed = false // do this *before* running the drawing code so we don't keep updating if drawing throws an error.
@@ -378,12 +374,11 @@ async function main() {
 			
 			
 			vec3.copy(cam_pos, camera_position)
-			/*
+			
 			terrain_actor.draw(scene_info, fog_args)
 			for (let i = 0; i < algae.length; i++) {
 				algae[i].draw(scene_info, fog_args)
-			}*/
-			a.draw(scene_info, fog_args)
+			}
 		}
 
 // 		debug_text.textContent = `

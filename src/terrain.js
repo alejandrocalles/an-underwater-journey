@@ -308,7 +308,8 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 					let v2 = vec3.clone(vertices[off + i * 3 + 1])
 					let v3 = vec3.clone(vertices[off + i * 3 + 2])
 					let angle_with_vertical = vec3.dot(n, [0, 0, 1])
-					if (angle_with_vertical > 0.5 && random_between(0, 1) < 0.01){
+					// TODO change the max algae number
+					if (algae.length < 30 && angle_with_vertical > 0.5 && random_between(0, 1) < 0.01){
 						let rand1 = random_between(0, 1)
 						let rand2 = random_between(0, 1)
 						angle_with_vertical = (angle_with_vertical - 0.1)**4
