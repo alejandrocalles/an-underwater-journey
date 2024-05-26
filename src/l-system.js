@@ -3,6 +3,20 @@ export function random_between(min, max) {
     return Math.random() * (max - min) + min
 }
 
+
+export function biased_random(min, max, biasTowards) {
+    const range = max - min;
+    const mean = biasTowards;
+    const standardDeviation = range / 3;
+    
+    let num = (Math.random() + Math.random() + Math.random()) / 3;
+    num = num * standardDeviation + mean;
+
+    num = Math.max(min, Math.min(max, num));
+    return num;
+}
+
+
 /*
     controls are:
     - T: move forward
@@ -15,26 +29,71 @@ export function random_between(min, max) {
     - |: turn around
 */
 
-
-// grow in height with few branches
-function rule_A() {
-    let r = random_between(0, 1)
-    if (r < 0.5) {
-        return 'T[+A]T[-A]&B'
+function rule_A(depth) {
+    let r = random_between(0, 1);
+    if (depth < 2) {
+        if (r < 0.4) {
+            return 'T/[+A]^T[-A]&B';  // Significant branching with vertical orientation
+        } else if (r < 0.7) {
+            return 'TT[\\A]/T[+B]';  // Moderate branching with slight horizontal elements
+        }
+        return 'T[|A]T[^B]';  // Varied branching with vertical orientation
+    } else if (depth < 4) {
+        if (r < 0.3) {
+            return 'T[+A]T[-A]&B';  // Significant branching with vertical orientation
+        } else if (r < 0.6) {
+            return 'TT[\\A]/T[+B]';  // Moderate branching with slight horizontal elements
+        } else if (r < 0.8) {
+            return 'T[|A]T[^B]';  // Varied branching with vertical orientation
+        }
+        return 'T[//A]\\T[//B]';  // Horizontal branching
+    } else {
+        if (depth >= 7 || r < 0.1) {
+            return 'T';  // Maximum branching depth reached, terminate branch
+        } else if (r < 0.2) {
+            return 'T[+A]T[-A]&B';  // Significant branching with vertical orientation
+        } else if (r < 0.5) {
+            return 'TT[\\A]/T[+B]';  // Moderate branching with slight horizontal elements
+        } else if (r < 0.7) {
+            return 'T[|A]T[^B]';  // Varied branching with vertical orientation
+        }
+        return 'T[//A]\\T[//B]';  // Horizontal branching
     }
-    return 'T[&A]/T[+B]'
 }
 
-// very bushy with many branches
-function rule_B() {
-    let r = random_between(0, 1)
-    if (r < 0.5) {
-        return 'T[/B]\\[&A]|T'
+function rule_B(depth) {
+    let r = random_between(0, 1);
+    if (depth < 2) {
+        if (r < 0.4) {
+            return 'T[/B]\\[&A]|T';  // Significant branching with vertical orientation
+        } else if (r < 0.7) {
+            return 'T[+B]-T[^A]';  // Moderate branching with slight horizontal elements
+        }
+        return '[\\B]/T[|A]';  // Varied branching with vertical orientation
+    } else if (depth < 4) {
+        if (r < 0.3) {
+            return 'T[/B]\\[&A]|T';  // Significant branching with vertical orientation
+        } else if (r < 0.6) {
+            return 'T[+B]-T[^A]';  // Moderate branching with slight horizontal elements
+        } else if (r < 0.8) {
+            return 'T[\\B]/T[|A]';  // Varied branching with vertical orientation
+        }
+        return '[//B]\\T[//A]';  // Horizontal branching
+    } else {
+        if (depth >= 7 || r < 0.1) {
+            return 'T';  // Maximum branching depth reached, terminate branch
+        } else if (r < 0.2) {
+            return 'T[/B]\\[&A]|T';  // Significant branching with vertical orientation
+        } else if (r < 0.5) {
+            return 'T[+B]-T[^A]';  // Moderate branching with slight horizontal elements
+        } else if (r < 0.7) {
+            return 'T[\\B]/T[|A]';  // Varied branching with vertical orientation
+        }
+        return '[//B]\\T[//A]';  // Horizontal branching
     }
-    return 'T[+B]-T[^A]'
 }
 
-function rule_C() {
+function rule_C(depth) {
     if (random_between(0, 1) < 0.01) {
         return '^\\|+B|/'
     }
@@ -43,16 +102,16 @@ function rule_C() {
 
 function get_string() {
     if (random_between(0, 1) < 0.5) {
-        return '/|^|&|\\|TA'
+        return '|/^&\\|T/A'
     }
-    return 'TA'
+    return '^&A'
 }
 
 export function algae_string_generator(iterations) {
     const initial_string = get_string()
-    let a = rule_A()
-    let b = rule_B()
-    let c = rule_C()
+    let a = rule_A
+    let b = rule_B
+    let c = rule_C
     const rules = {
         'A': a,
         'B': b,
@@ -66,7 +125,7 @@ function generate_string(initial_string, rules, iterations) {
     for (let i = 0; i < iterations; i++) {
         initial_string = initial_string.split('').map((char) => {
             if (char === 'A' || char === 'B' || char === 'C') {
-                return rules[char]
+                return rules[char](i)
             }
             else {
                 return char
@@ -75,56 +134,4 @@ function generate_string(initial_string, rules, iterations) {
     }
 
     return initial_string
-}
-
-function draw_algae(regl, resources, position) {
-    const string = algae_string(10)
-    const mesh = draw_algae_string(string, position)
-
-    const pipeline_draw_algae = regl({
-        attributes: {
-            position: mesh.vertices,
-            normal: mesh.normals,
-        },
-        elements: mesh.faces,
-        uniforms: {
-            mat_mvp: regl.prop('mat_mvp'),
-            mat_model_view: regl.prop('mat_model_view'),
-            mat_normals: regl.prop('mat_normals'),
-
-            light_position: regl.prop('light_position'),
-
-            color: [0.2, 0.8, 0.2],
-        },
-        vert: resources['shaders/mesh.vert.glsl'],
-        frag: resources['shaders/mesh.frag.glsl'],
-    })
-
-    class AlgaeActor {
-        constructor() {
-            this.mat_mvp = mat4.create()
-            this.mat_model_view = mat4.create()
-            this.mat_normals = mat3.create()
-            this.mat_model_to_world = mat4.create()
-        }
-
-        draw({mat_projection, mat_view, light_position_cam}) {
-            mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
-            mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
-
-            mat3.fromMat4(this.mat_normals, this.mat_model_view)
-            mat3.transpose(this.mat_normals, this.mat_normals)
-            mat3.invert(this.mat_normals, this.mat_normals)
-
-            pipeline_draw_algae({
-                mat_mvp: this.mat_mvp,
-                mat_model_view: this.mat_model_view,
-                mat_normals: this.mat_normals,
-
-                light_position: light_position_cam,
-            })
-        }
-    }
-
-    return new AlgaeActor()
 }

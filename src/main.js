@@ -96,7 +96,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let camera_position = [-5, -5, 5]
+	let campos = [-7, -7, 1]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -104,7 +104,7 @@ async function main() {
 	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
-	let cam_target = vec3.normalize(vec3.create(), vec3.negate([], camera_position))
+	let cam_target = vec3.normalize(vec3.create(), vec3.negate([], campos))
 
 	let cam_speed = 1
 
@@ -127,7 +127,7 @@ async function main() {
 		}
 		// Example camera matrix, looking along forward-X, edit this
 		const look_at = mat4.lookAt(mat4.create(), 
-			camera_position, // camera position in world coord
+			campos, // camera position in world coord
 			cam_target, // view target point
 			up_vect, // up vector
 		)
@@ -148,7 +148,7 @@ async function main() {
 			cam_angle_z += event.movementX * 0.001
 			cam_angle_y += event.movementY * 0.001
 		
-			vec3.sub(cam_target, cam_target, camera_position)
+			vec3.sub(cam_target, cam_target, campos)
 			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
 
 			let xrot = event.movementY * 0.001 * Math.cos(cam_angle_z)
@@ -157,7 +157,7 @@ async function main() {
 			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
 			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
 
-			vec3.add(cam_target, cam_target, camera_position)
+			vec3.add(cam_target, cam_target, campos)
 
 			update_cam_transform()
 			update_needed = true
@@ -187,6 +187,7 @@ async function main() {
 		useFog: true,
 	}
 
+	
 	let terrain_width = 180
 	let terrain_height = 180
 	let terrain_depth = 96
@@ -211,48 +212,48 @@ async function main() {
 
 
 	register_keyboard_action('w', () => {
-		let cam_to_target = vec3.subtract(vec3.create(), cam_target, camera_position)
+		let cam_to_target = vec3.subtract(vec3.create(), cam_target, campos)
 		cam_to_target[2] = 0
 		vec3.normalize(cam_to_target, cam_to_target)
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
-		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(campos, campos, cam_to_target)
 		vec3.add(cam_target, cam_target, cam_to_target)
 
 		update_cam_transform()
 		update_needed = true
 	})
 	register_keyboard_action('s', () => {
-		let cam_to_target = vec3.subtract(vec3.create(), cam_target, camera_position)
+		let cam_to_target = vec3.subtract(vec3.create(), cam_target, campos)
 		cam_to_target[2] = 0
 		vec3.normalize(cam_to_target, cam_to_target)
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
-		vec3.sub(camera_position, camera_position, cam_to_target)
+		vec3.sub(campos, campos, cam_to_target)
 		vec3.sub(cam_target, cam_target, cam_to_target)
 
 		update_cam_transform()
 		update_needed = true
 	})	
 	register_keyboard_action('a', () => {
-		let cam_to_target = vec3.subtract(vec3.create(), cam_target, camera_position)
+		let cam_to_target = vec3.subtract(vec3.create(), cam_target, campos)
 		cam_to_target[2] = 0
 		vec3.normalize(cam_to_target, cam_to_target)
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
 		vec3.rotateZ(cam_to_target, cam_to_target, [0, 0, 0], Math.PI/2)
 
-		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(campos, campos, cam_to_target)
 		vec3.add(cam_target, cam_target, cam_to_target)
 
 		update_cam_transform()
 		update_needed = true
 	})	
 	register_keyboard_action('d', () => {
-		let cam_to_target = vec3.subtract(vec3.create(), cam_target, camera_position)
+		let cam_to_target = vec3.subtract(vec3.create(), cam_target, campos)
 		cam_to_target[2] = 0
 		vec3.normalize(cam_to_target, cam_to_target)
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
 		vec3.rotateZ(cam_to_target, cam_to_target, [0, 0, 0], -Math.PI/2)
 
-		vec3.add(camera_position, camera_position, cam_to_target)
+		vec3.add(campos, campos, cam_to_target)
 		vec3.add(cam_target, cam_target, cam_to_target)
 
 		update_cam_transform()
@@ -261,7 +262,7 @@ async function main() {
 	register_keyboard_action('shift', () => {
 		let movement = [0, 0, -cam_speed]
 
-		vec3.add(camera_position, camera_position, movement)
+		vec3.add(campos, campos, movement)
 		vec3.add(cam_target, cam_target, movement)
 
 		update_cam_transform()
@@ -270,7 +271,7 @@ async function main() {
 	register_keyboard_action(' ', () => {
 		let movement = [0, 0, cam_speed]
 
-		vec3.add(camera_position, camera_position, movement)
+		vec3.add(campos, campos, movement)
 		vec3.add(cam_target, cam_target, movement)
 
 		update_cam_transform()
@@ -373,11 +374,11 @@ async function main() {
 			regl.clear({color: [0.9, 0.9, 1., 1]})
 			
 			
-			vec3.copy(cam_pos, camera_position)
+			vec3.copy(cam_pos, campos)
 			
-			terrain_actor.draw(scene_info, fog_args)
+			terrain_actor.draw(scene_info, fog_args, cam_pos)
 			for (let i = 0; i < algae.length; i++) {
-				algae[i].draw(scene_info, fog_args)
+				algae[i].draw(scene_info, fog_args, cam_pos)
 			}
 		}
 

@@ -1,7 +1,7 @@
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
 import {deg_to_rad, mat4_matmul_many} from "./icg_math.js"
 import { icg_mesh_load_obj, load_mesh } from "./icg_mesh.js"
-import {algae_string_generator, random_between} from "./l-system.js"
+import {algae_string_generator, random_between, biased_random} from "./l-system.js"
 
 
 function draw_branch(vertices, faces, normals, position, direction, angle, width, height, first = false) {
@@ -84,13 +84,13 @@ export function init_algae(regl, resources, position) {
     let normals = []
     let faces = []
 
-    const algae_string = algae_string_generator(random_between(5, 10))
+    const algae_string = algae_string_generator(biased_random(3, 12, 4))
 
     let stack = []
 
 
-    let width = 0.08
-    let height = 0.4
+    let width = random_between(0.06, 0.09)
+    let height = random_between(0.2, 0.5)
     let direction = vec3.fromValues(0, 0, 1)
     let angle = random_between(0, 2 * Math.PI)
     let rotation = mat3.create()
@@ -162,12 +162,12 @@ export function init_algae(regl, resources, position) {
                 vec3.rotateZ(direction, direction, [0, 0, 0], random_between(Math.PI / 6, 2 * Math.PI - Math.PI / 6))
                 break
             case '+':
-                width *= 0.9
-                height *= 0.9
+                width *= random_between(0.8, 1.01)
+                height *= random_between(0.8, 1.01)
                 break
             case '-':
-                width *= 1.1
-                height *= 1.1
+                width *= random_between(0.95, 1.15)
+                height *= random_between(0.95, 1.15)
                 break
             case '[':
                 // push state
@@ -209,6 +209,8 @@ export function init_algae(regl, resources, position) {
 
 			light_position: regl.prop('light_position'),
 
+            cam_pos: regl.prop('cam_pos'),
+
 			fog_color: regl.prop('fog_color'),
 			closeFarThreshold: regl.prop('closeFarThreshold'),
 			minMaxIntensity: regl.prop('minMaxIntensity'),
@@ -229,7 +231,7 @@ export function init_algae(regl, resources, position) {
             this.mat_model_to_world = mat4.create()
         }
     
-        draw({mat_projection, mat_view, light_position_cam}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}) {
+        draw({mat_projection, mat_view, light_position_cam}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}, cam_pos) {
             mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
             mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
     
@@ -243,6 +245,8 @@ export function init_algae(regl, resources, position) {
                 mat_normals: this.mat_normals,
         
                 light_position: light_position_cam,
+
+                cam_pos: cam_pos,
                 
 				fog_color: fog_color,
 				closeFarThreshold: closeFarThreshold,

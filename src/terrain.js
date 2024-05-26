@@ -77,90 +77,6 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 	const faces = []
 	const algae = []
 
-	// create a flat surface of water
-	for (let x = offset.x; x < grid_width_; x++) {
-		for (let y = offset.y; y < grid_height_; y++) {
-			let base = vertices.length
-
-			vertices.push([x, y, WATER_LEVEL])
-			vertices.push([x + 1, y, WATER_LEVEL])
-			vertices.push([x, y + 1, WATER_LEVEL])
-			vertices.push([x + 1, y + 1, WATER_LEVEL])
-
-			let normal = [0, 0, -1]
-			normals.push(normal)
-			normals.push(normal)
-			normals.push(normal)
-			normals.push(normal)
-
-			faces.push([base, base + 1, base + 2])
-			faces.push([base + 2, base + 3, base + 1])
-		}
-	}
-
-	// create the roof of the terrain
-	for (let y = offset.y; y < grid_height_; y++) {
-		for (let x = offset.x; x < grid_width_; x++) {
-			let gd = grid_depth - 1
-
-			let base = vertices.length
-			let val1 = height_map.get(x - offset.x, y - offset.y, gd)
-			let val2 = height_map.get(x - offset.x + 1, y - offset.y, gd)
-			let val3 = height_map.get(x - offset.x, y - offset.y + 1, gd)
-			let val4 = height_map.get(x - offset.x + 1, y - offset.y + 1, gd)
-
-			if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5 && val4 < 0.5) {
-				vertices.push([x, y, gd])
-				vertices.push([x + 1, y, gd])
-				vertices.push([x, y + 1, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-				faces.push([base + 2, base + 3, base + 1])
-			}
-
-			else if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5){
-				vertices.push([x, y, gd])
-				vertices.push([x + 1, y, gd])
-				vertices.push([x, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-			}
-			else if (val1 < 0.5 && val2 < 0.5 && val4 < 0.5){
-				vertices.push([x, y, gd])
-				vertices.push([x + 1, y, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-			}
-			else if (val1 < 0.5 && val3 < 0.5 && val4 < 0.5){
-				vertices.push([x, y, gd])
-				vertices.push([x, y + 1, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-			}
-			else if (val2 < 0.5 && val3 < 0.5 && val4 < 0.5){
-				vertices.push([x + 1, y, gd])
-				vertices.push([x, y + 1, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-			}
-		}
-	}
-
 	/*
 	for (let z = offset.z; z < grid_depth_; z++) {
 		for (let y = offset.y; y < grid_height_; y++) {
@@ -301,34 +217,116 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 						off + i * 3 + 2,
 					]
 					faces.push(f)
-
-					// add algae randomly if terrain is flat enough
-					let n = vec3.clone(normal)
-					let v1 = vec3.clone(vertices[off + i * 3])
-					let v2 = vec3.clone(vertices[off + i * 3 + 1])
-					let v3 = vec3.clone(vertices[off + i * 3 + 2])
-					let angle_with_vertical = vec3.dot(n, [0, 0, 1])
-					// TODO change the max algae number
-					if (algae.length < 30 && angle_with_vertical > 0.5 && random_between(0, 1) < 0.01){
-						let rand1 = random_between(0, 1)
-						let rand2 = random_between(0, 1)
-						angle_with_vertical = (angle_with_vertical - 0.1)**4
-
-						if (rand1 < angle_with_vertical && rand2 < 0.4) {
-							algae.push(init_algae(regl, resources, v1))
-						}
-						if (rand1 < angle_with_vertical && rand2 < 0.7 && rand2 > 0.3) {
-							algae.push(init_algae(regl, resources, v2))
-						}
-						if (rand1 < angle_with_vertical && rand2 > 0.6) {
-							algae.push(init_algae(regl, resources, v3))
-						}
-						console.log("algae")
-					}
 				}
 			}
 		}
 	}
+
+	// create the roof of the terrain
+	for (let y = offset.y; y < grid_height_; y++) {
+		for (let x = offset.x; x < grid_width_; x++) {
+			let gd = grid_depth - 1
+
+			let base = vertices.length
+			let val1 = height_map.get(x - offset.x, y - offset.y, gd)
+			let val2 = height_map.get(x - offset.x + 1, y - offset.y, gd)
+			let val3 = height_map.get(x - offset.x, y - offset.y + 1, gd)
+			let val4 = height_map.get(x - offset.x + 1, y - offset.y + 1, gd)
+
+			if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5 && val4 < 0.5) {
+				vertices.push([x, y, gd])
+				vertices.push([x + 1, y, gd])
+				vertices.push([x, y + 1, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+				faces.push([base + 2, base + 3, base + 1])
+			}
+
+			else if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5){
+				vertices.push([x, y, gd])
+				vertices.push([x + 1, y, gd])
+				vertices.push([x, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
+			else if (val1 < 0.5 && val2 < 0.5 && val4 < 0.5){
+				vertices.push([x, y, gd])
+				vertices.push([x + 1, y, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
+			else if (val1 < 0.5 && val3 < 0.5 && val4 < 0.5){
+				vertices.push([x, y, gd])
+				vertices.push([x, y + 1, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
+			else if (val2 < 0.5 && val3 < 0.5 && val4 < 0.5){
+				vertices.push([x + 1, y, gd])
+				vertices.push([x, y + 1, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
+		}
+	}
+
+	// add algae randomly if terrain is flat enough
+	for (let i = 0; i < faces.length; i++) {
+		for (let j = 0; j < 3; j++) {
+			let index = faces[i][j]
+			let n = vec3.clone(normals[index])
+			let angle_with_vertical = vec3.dot(n, [0, 0, 1])
+			
+			if (angle_with_vertical < -0.2 && random_between(0, 1) < 0.002){
+				let r = random_between(0, 1)
+				angle_with_vertical = (angle_with_vertical - 0.1)**4
+
+				if (r < angle_with_vertical) {
+					let v = vec3.clone(vertices[index])
+					algae.push(init_algae(regl, resources, v))
+				}
+				console.log("algae")
+			}
+		}
+	}
+
+	/*
+	// create a flat surface of water
+	for (let x = offset.x; x < grid_width_; x++) {
+		for (let y = offset.y; y < grid_height_; y++) {
+			let base = vertices.length
+
+			vertices.push([x, y, WATER_LEVEL])
+			vertices.push([x + 1, y, WATER_LEVEL])
+			vertices.push([x, y + 1, WATER_LEVEL])
+			vertices.push([x + 1, y + 1, WATER_LEVEL])
+
+			let normal = [0, 0, -1]
+			normals.push(normal)
+			normals.push(normal)
+			normals.push(normal)
+			normals.push(normal)
+
+			faces.push([base, base + 1, base + 2])
+			faces.push([base + 2, base + 3, base + 1])
+		}
+	}*/
+
 
 	console.log(vertices, normals, faces, algae)
 	return {terrain: {
@@ -360,6 +358,8 @@ export function init_terrain(regl, resources, height_map_buffer, offset) {
 
 			light_position: regl.prop('light_position'),
 
+			cam_pos: regl.prop('cam_pos'),
+
 			fog_color: regl.prop('fog_color'),
 			closeFarThreshold: regl.prop('closeFarThreshold'),
 			minMaxIntensity: regl.prop('minMaxIntensity'),
@@ -380,7 +380,7 @@ export function init_terrain(regl, resources, height_map_buffer, offset) {
 			this.mat_model_to_world = mat4.create()
 		}
 
-		draw({mat_projection, mat_view, light_position_cam}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}) {
+		draw({mat_projection, mat_view, light_position_cam}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}, cam_pos) {
 			mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
 			mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
 	
@@ -394,6 +394,8 @@ export function init_terrain(regl, resources, height_map_buffer, offset) {
 				mat_normals: this.mat_normals,
 		
 				light_position: light_position_cam,
+
+				cam_pos: cam_pos,
 
 				fog_color: fog_color,
 				closeFarThreshold: closeFarThreshold,
