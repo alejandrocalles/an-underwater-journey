@@ -193,8 +193,9 @@ async function main() {
 	let terrain_depth = 96
 
 	let textures = []
+	let fbm = 2 // <1 -> Perlin, >1 -> FBM
 	for (let i = 0; i < terrain_depth; i++) {
-		let texture = init_noise(regl, resources)
+		let texture = init_noise(regl, resources, fbm)
 		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
 		textures.push(tex)
 	}

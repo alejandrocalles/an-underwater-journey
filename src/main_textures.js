@@ -130,7 +130,7 @@ async function main() {
 		Noise
 	---------------------------------------------------------------*/
 
-	const noise_textures = init_noise(regl, resources)
+	const noise_textures = init_noise(regl, resources, 2)
 
 	/*
 		UI

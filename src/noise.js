@@ -14,7 +14,7 @@ const mesh_quad_2d = {
 	],
 }
 
-export function init_noise(regl, resources) {
+export function init_noise(regl, resources, fbm=0) {
 
 	// shader implementing all noise functions
 	const noise_library_code = resources['shaders/noise.frag.glsl']
@@ -111,6 +111,7 @@ export function init_noise(regl, resources) {
 			permSampler: permTexture,
 			gradPSampler: gradPTexture,
 			textureIndex: regl.prop('texIndex'),
+			fbm: fbm,
 		},
 				
 		vert: resources['shaders/display.vert.glsl'],
@@ -144,9 +145,10 @@ export function init_noise(regl, resources) {
 			
 varying vec2 v2f_tex_coords;
 uniform int textureIndex;
+uniform int fbm;
 
 void main() {
-	vec3 color = ${this.shader_func_name}(vec3(v2f_tex_coords, float(textureIndex)));
+	vec3 color = ${this.shader_func_name}(vec3(v2f_tex_coords, float(textureIndex)), fbm);
 	gl_FragColor = vec4(color, 1.0);
 }
 `;		

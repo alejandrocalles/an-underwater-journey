@@ -93,7 +93,7 @@ float perlin_fbm_1d(float x) {
 	float result = 0.;
 
 	for(int i = 0; i < num_octaves; i++) {
-		result += pow(ampl_multiplier, float(i)) * perlin_noise_1d(x * pow(freq_multiplier, float(i)));
+		result += pow(ampl_multiplier, float(i)) * perlin_noise_1d(x * pow(1.5, float(i)));
 	}
 
 	return result;
@@ -788,19 +788,19 @@ float haha(vec3 P) {
     return 2.2 * n_xyz;
 }
 
-vec3 tex_fbm_3d(vec3 point) {
-
-	//vec3 point3d = vec3(point.x*1.8, (point.y - floor(point.y/100.) * 100.)*1.8, floor(point.y/100.)*1.8);
-	vec3 point3d = vec3(point.x*1.8, point.y*1.8, point.z * 0.03);
+vec3 tex_fbm_3d(vec3 point, int fbm) {
+	vec3 point3d = vec3(point.x*1.8, point.y*1.8, point.z * 0.028);
 	float result = 0.;
 
-	for (int i = 0; i < num_octaves; i++) {
-		result += pow(ampl_multiplier, float(i)) * haha(point3d * pow(freq_multiplier, float(i)));
+	if (fbm > 1) {
+		for (int i = 0; i < num_octaves; i++) {
+			result += pow(ampl_multiplier, float(i)) * haha(point3d * pow(1.4, float(i)));
+		}
+
+		result = (result * 0.25) + 0.5;
+	} else {
+		result = (haha(point3d) * 0.25) + 0.5;
 	}
-
-	result = (result * 0.25) + 0.5;
-
-	result = (haha(point3d) * 0.25) + 0.5;
 
 	if (result > 0.5) {
 		result = 1.;
