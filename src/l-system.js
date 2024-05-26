@@ -18,47 +18,25 @@ export function random_between(min, max) {
 
 // grow in height with few branches
 function rule_A() {
-    let s = 'T|&'
     let r = random_between(0, 1)
-    r = r ** 2 * 8
-    console.log(r)
-    for (let i = 0; i < r; i++) {
-        if (random_between(0, 1) < 0.5) {
-            s += '[|/TB]'
-        }
-        else if (random_between(0, 1) < 0.7) {
-            s += '[|^\\B]'
-        }
-        else {
-            s += '[|&A][C]'
-        }
+    if (r < 0.5) {
+        return 'T[+A]T[-A]&B'
     }
-    return s
+    return 'T[&A]/T[+B]'
 }
 
 // very bushy with many branches
 function rule_B() {
-    let s = 'T|&'
     let r = random_between(0, 1)
-    r = r ** 2 * 8
-    console.log(r)
-    for (let i = 0; i < r; i++) {
-        if (random_between(0, 1) < 0.5) {
-            s += '[|&TB]'
-        }
-        else if (random_between(0, 1) < 0.7) {
-            s += '[|^\\B]'
-        }
-        else {
-            s += '[|/TB]|/^T[A]'
-        }
+    if (r < 0.5) {
+        return 'T[/B]\\[&A]|T'
     }
-    return s
+    return 'T[+B]-T[^A]'
 }
 
 function rule_C() {
     if (random_between(0, 1) < 0.01) {
-        return '^\\|+B|/[A]'
+        return '^\\|+B|/'
     }
     return '^&^/\\++TF'
 }
@@ -94,7 +72,6 @@ function generate_string(initial_string, rules, iterations) {
                 return char
             }
         }).join('')
-        console.log(initial_string)
     }
 
     return initial_string
