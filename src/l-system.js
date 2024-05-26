@@ -19,26 +19,41 @@ export function random_between(min, max) {
 // grow in height with few branches
 function rule_A() {
     let s = 'T|&'
-    r = random_between(1, 5)
+    let r = random_between(0, 1)
+    r = r ** 2 * 8
+    console.log(r)
     for (let i = 0; i < r; i++) {
         if (random_between(0, 1) < 0.5) {
-            s.concat('[|/TB]')
+            s += '[|/TB]'
         }
         else if (random_between(0, 1) < 0.7) {
-            s.concat('[|^\\B]')
+            s += '[|^\\B]'
         }
         else {
-            s.concat('[|&A]')
+            s += '[|&A][C]'
         }
     }
+    return s
 }
 
 // very bushy with many branches
 function rule_B() {
-    if (random_between(0, 1) < 0.8) {
-        return '+[//T^C]T[&\\|+B]'
+    let s = 'T|&'
+    let r = random_between(0, 1)
+    r = r ** 2 * 8
+    console.log(r)
+    for (let i = 0; i < r; i++) {
+        if (random_between(0, 1) < 0.5) {
+            s += '[|&TB]'
+        }
+        else if (random_between(0, 1) < 0.7) {
+            s += '[|^\\B]'
+        }
+        else {
+            s += '[|/TB]|/^T[A]'
+        }
     }
-    return 'T|&[//+B]^/\\A'
+    return s
 }
 
 function rule_C() {
@@ -50,9 +65,9 @@ function rule_C() {
 
 function get_string() {
     if (random_between(0, 1) < 0.5) {
-        return 'T[A][B]'
+        return '/|^|&|\\|TA'
     }
-    return 'TBT|/|^TA'
+    return 'TA'
 }
 
 export function algae_string_generator(iterations) {
