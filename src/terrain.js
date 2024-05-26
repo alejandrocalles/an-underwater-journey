@@ -1,108 +1,351 @@
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
+import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
 import {mat4_matmul_many} from "./icg_math.js"
+import {compute_cube, index_to_v_index, vertex_interpolate} from "./Marching_cubes_functions.js"
+import { triTable, edge_table } from "./marching_cubes_tables.js"
+import { random_between } from "./l-system.js"
+import { init_algae } from "./algae.js"
+
 
 class BufferData {
 
 	constructor(regl, buffer) {
-		this.width = buffer.width
-		this.height = buffer.height
-		this.data = regl.read({framebuffer: buffer})
+		this.width = buffer[0].width
+		this.height = buffer[0].height
+		this.depth = buffer.length
+		this.data = []
+		for (let i = 0; i < this.depth; i++) {
+			this.data.push(regl.read({framebuffer:buffer[i]}))
+		}
 
 		// this can read both float and uint8 buffers
-		if (this.data instanceof Uint8Array) {
+		if (this.data[0] instanceof Uint8Array) {
 			// uint8 array is in range 0...255
 			this.scale = 1./255.
 		} else {
 			this.scale = 1.
 		}
-
 	}
 
-	get(x, y) {
+	get(x, y, z) {
 		x = Math.min(Math.max(x, 0), this.width - 1)
 		y = Math.min(Math.max(y, 0), this.height - 1)
-
-		return this.data[x + y*this.width << 2] * this.scale
+		z = Math.min(Math.max(z, 0), this.depth - 1)
+		
+		return this.data[z][(x + y*this.width)<<2] * this.scale
+		//return this.data[(x + y*this.width + z*this.width*this.height)<<2] * this.scale
 	}
 }
 
 
-function terrain_build_mesh(height_map) {
+//TODO make sure noise function returns value between [-1, 1]
+function edge_table_index(cube) {
+	let cubeindex = 0;
+	if (cube[0] < 0) cubeindex |= 1
+	if (cube[1] < 0) cubeindex |= 2
+	if (cube[2] < 0) cubeindex |= 4
+	if (cube[3] < 0) cubeindex |= 8
+	if (cube[4] < 0) cubeindex |= 16
+	if (cube[5] < 0) cubeindex |= 32
+	if (cube[6] < 0) cubeindex |= 64
+	if (cube[7] < 0) cubeindex |= 128
+
+	return cubeindex
+}
+
+
+function get_vertex_from_edge(edge_number) {
+	if (edge_number < 4) { return [edge_number, (edge_number + 1) % 4]}
+	if (edge_number < 8) { return [edge_number, (edge_number + 1) % 4 + 4]}
+	return [edge_number % 4, edge_number % 4 + 4]
+}
+
+
+function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 0}) {
 	const grid_width = height_map.width
 	const grid_height = height_map.height
+	const grid_depth = height_map.depth
+	
+	const grid_width_ = height_map.width + offset.x
+	const grid_height_ = height_map.height + offset.y
+	const grid_depth_ = height_map.depth + offset.z
 
-	const WATER_LEVEL = -0.03125
+	const WATER_LEVEL = 90.5
 
 	const vertices = []
 	const normals = []
 	const faces = []
+	const algae = []
 
-	// Map a 2D grid index (x, y) into a 1D index into the output vertex array.
-	function xy_to_v_index(x, y) {
-		return x + y*grid_width
+	// create a flat surface of water
+	for (let x = offset.x; x < grid_width_; x++) {
+		for (let y = offset.y; y < grid_height_; y++) {
+			let base = vertices.length
+
+			vertices.push([x, y, WATER_LEVEL])
+			vertices.push([x + 1, y, WATER_LEVEL])
+			vertices.push([x, y + 1, WATER_LEVEL])
+			vertices.push([x + 1, y + 1, WATER_LEVEL])
+
+			let normal = [0, 0, -1]
+			normals.push(normal)
+			normals.push(normal)
+			normals.push(normal)
+			normals.push(normal)
+
+			faces.push([base, base + 1, base + 2])
+			faces.push([base + 2, base + 3, base + 1])
+		}
 	}
 
-	for(let gy = 0; gy < grid_height; gy++) {
-		for(let gx = 0; gx < grid_width; gx++) {
-			const idx = xy_to_v_index(gx, gy)
-			let elevation = height_map.get(gx, gy) - 0.5 // we put the value between 0...1 so that it could be stored in a non-float texture on older browsers/GLES3, the -0.5 brings it back to -0.5 ... 0.5
+	// create the roof of the terrain
+	for (let y = offset.y; y < grid_height_; y++) {
+		for (let x = offset.x; x < grid_width_; x++) {
+			let gd = grid_depth - 1
 
-			// normal as finite difference of the height map
-			// dz/dx = (h(x+dx) - h(x-dx)) / (2 dx)
-			normals[idx] = vec3.normalize([0, 0, 0], [
-				-(height_map.get(gx+1, gy) - height_map.get(gx-1, gy)) / (2. / grid_width),
-				-(height_map.get(gx, gy+1) - height_map.get(gx, gy-1)) / (2. / grid_height),
-				1.,
-			])
+			let base = vertices.length
+			let val1 = height_map.get(x - offset.x, y - offset.y, gd)
+			let val2 = height_map.get(x - offset.x + 1, y - offset.y, gd)
+			let val3 = height_map.get(x - offset.x, y - offset.y + 1, gd)
+			let val4 = height_map.get(x - offset.x + 1, y - offset.y + 1, gd)
 
-			/* #TODO PG1.6.1
-			Generate the displaced terrain vertex corresponding to integer grid location (gx, gy). 
-			The height (Z coordinate) of this vertex is determined by height_map.
-			If the point falls below WATER_LEVEL:
-			* it should be clamped back to WATER_LEVEL.
-			* the normal should be [0, 0, 1]
-
-			The XY coordinates are calculated so that the full grid covers the square [-0.5, 0.5]^2 in the XY plane.
-			*/
-			if (elevation < WATER_LEVEL) {
-				elevation = WATER_LEVEL
-				normals[idx] = [0, 0, 1]
+			if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5 && val4 < 0.5) {
+				vertices.push([x, y, gd])
+				vertices.push([x + 1, y, gd])
+				vertices.push([x, y + 1, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+				faces.push([base + 2, base + 3, base + 1])
 			}
 
-			vertices[idx] = [gx / grid_width - 0.5, gy / grid_height - 0.5, elevation]
+			else if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5){
+				vertices.push([x, y, gd])
+				vertices.push([x + 1, y, gd])
+				vertices.push([x, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
+			else if (val1 < 0.5 && val2 < 0.5 && val4 < 0.5){
+				vertices.push([x, y, gd])
+				vertices.push([x + 1, y, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
+			else if (val1 < 0.5 && val3 < 0.5 && val4 < 0.5){
+				vertices.push([x, y, gd])
+				vertices.push([x, y + 1, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
+			else if (val2 < 0.5 && val3 < 0.5 && val4 < 0.5){
+				vertices.push([x + 1, y, gd])
+				vertices.push([x, y + 1, gd])
+				vertices.push([x + 1, y + 1, gd])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				normals.push([0, 0, -1])
+				faces.push([base, base + 1, base + 2])
+			}
 		}
 	}
 
-	for(let gy = 0; gy < grid_height - 1; gy++) {
-		for(let gx = 0; gx < grid_width - 1; gx++) {
-			/* #TODO PG1.6.1
-			Triangulate the grid cell whose lower lefthand corner is grid index (gx, gy).
-			You will need to create two triangles to fill each square.
-			*/
-			// 4 vertices of the cell
-			let vc = xy_to_v_index(gx, gy + 1)
-			let va = xy_to_v_index(gx, gy)
-			let vb = xy_to_v_index(gx + 1, gy)
-			let vd = xy_to_v_index(gx + 1, gy + 1)
+	/*
+	for (let z = offset.z; z < grid_depth_; z++) {
+		for (let y = offset.y; y < grid_height_; y++) {
+			for (let x = offset.z; x < grid_width_; x++) {
+				let average = 0
+				average += height_map.get(x, y, z)
+				
+				if (average > 0.5) {
+					let base = vertices.length
 
-			// first triangle
-			faces.push([vc, va, vb])
-			// second triangle
-			faces.push([vc, vb, vd])
+					vertices.push([x, y, z])
+					let normal = [-1, -1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x + 1, y, z])
+					normal = [1, -1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x, y + 1, z])
+					normal = [1, -1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x+ 1, y + 1, z])
+					normal = [1, 1, -1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x, y, z + 1])
+					normal = [-1, -1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x + 1, y, z + 1])
+					normal = [1, -1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x, y + 1, z + 1])
+					normal = [-1, 1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					vertices.push([x + 1, y + 1, z + 1])
+					normal = [1, 1, 1]
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+
+					let face = [base, base + 1, base + 2]
+					faces.push(face)
+					face = [base + 1, base + 2, base + 3]
+					faces.push(face)
+					face = [base, base + 1, base + 4]
+					faces.push(face)
+					face = [base + 1, base + 5, base + 4]
+					faces.push(face)
+					face = [base, base + 2, base + 4]
+					faces.push(face)
+					face = [base + 2, base + 4, base + 6]
+					faces.push(face)
+					face = [base + 7, base + 3, base + 6]
+					faces.push(face)
+					face = [base + 2, base + 3, base + 6]
+					faces.push(face)
+					face = [base + 3, base + 5, base + 7]
+					faces.push(face)
+					face = [base + 3, base + 5, base + 1]
+					faces.push(face)
+					face = [base + 4, base + 5, base + 6]
+					faces.push(face)
+					face = [base + 5, base + 6, base + 7]
+					faces.push(face)
+				}
+			}
+		}
+	}*/
+
+
+	// marching cubes based on https://www.cs.montana.edu/courses/spring2005/525/students/Hunt1.pdf
+	// and https://paulbourke.net/geometry/polygonise/
+	for(let gx = offset.x; gx < grid_width_ - 1; gx++) {
+		for(let gy = offset.y; gy < grid_height_ - 1; gy++) {
+			for(let gz = offset.z; gz < grid_depth_ - 1; gz++) {
+				let vert = [
+					[gx, gy, gz],
+					[gx + 1, gy, gz],
+					[gx + 1, gy + 1, gz],
+					[gx, gy + 1, gz],
+					[gx, gy, gz + 1],
+					[gx + 1, gy, gz + 1],
+					[gx + 1, gy + 1, gz + 1],
+					[gx, gy + 1, gz + 1],
+				]
+				
+				gx -= offset.x
+				gy -= offset.y
+				gz -= offset.z
+				let vals = [
+					height_map.get(gx, gy, gz),
+					height_map.get(gx + 1, gy, gz),
+					height_map.get(gx + 1, gy + 1, gz),
+					height_map.get(gx, gy + 1, gz),
+					height_map.get(gx, gy, gz + 1),
+					height_map.get(gx + 1, gy, gz + 1),
+					height_map.get(gx + 1, gy + 1, gz + 1),
+					height_map.get(gx, gy + 1, gz + 1),
+				]
+
+				let cube = {
+					vert: vert,
+					val: vals,
+				}
+				let c = compute_cube(cube)
+				if (!c.success) continue
+
+				let off = vertices.length
+				for (let i = 0; i < c.triangles.length; i++) {
+					vertices.push(c.vertices[c.triangles[i][0]])
+					vertices.push(c.vertices[c.triangles[i][1]])
+					vertices.push(c.vertices[c.triangles[i][2]])
+
+					let normal = vec3.create()
+					let v0v1 = vec3.create()
+					let v0v2 = vec3.create()
+					vec3.subtract(v0v1, vertices[off + i * 3 + 1], vertices[off + i * 3])
+					vec3.subtract(v0v2, vertices[off + i * 3 + 2], vertices[off + i * 3])
+					vec3.cross(normal, v0v1, v0v2)
+					vec3.normalize(normal, normal)
+					normals.push(normal)
+					normals.push(normal)
+					normals.push(normal)
+
+					let f = [
+						off + i * 3,
+						off + i * 3 + 1,
+						off + i * 3 + 2,
+					]
+					faces.push(f)
+
+					// add algae randomly if terrain is flat enough
+					let n = vec3.clone(normal)
+					let v1 = vec3.clone(vertices[off + i * 3])
+					let v2 = vec3.clone(vertices[off + i * 3 + 1])
+					let v3 = vec3.clone(vertices[off + i * 3 + 2])
+					let angle_with_vertical = vec3.dot(n, [0, 0, 1])
+					if (angle_with_vertical > 0.5 && random_between(0, 1) < 0.01){
+						let rand1 = random_between(0, 1)
+						let rand2 = random_between(0, 1)
+						angle_with_vertical = (angle_with_vertical - 0.1)**4
+
+						if (rand1 < angle_with_vertical && rand2 < 0.4) {
+							algae.push(init_algae(regl, resources, v1))
+						}
+						if (rand1 < angle_with_vertical && rand2 < 0.7 && rand2 > 0.3) {
+							algae.push(init_algae(regl, resources, v2))
+						}
+						if (rand1 < angle_with_vertical && rand2 > 0.6) {
+							algae.push(init_algae(regl, resources, v3))
+						}
+						console.log("algae")
+					}
+				}
+			}
 		}
 	}
 
-	return {
+	console.log(vertices, normals, faces, algae)
+	return {terrain: {
 		vertex_positions: vertices,
 		vertex_normals: normals,
 		faces: faces,
+		},
+		algae: algae
 	}
 }
 
 
-export function init_terrain(regl, resources, height_map_buffer) {
+export function init_terrain(regl, resources, height_map_buffer, offset) {
+	console.log(offset)
 
-	const terrain_mesh = terrain_build_mesh(new BufferData(regl, height_map_buffer))
+	const res = terrain_build_mesh(new BufferData(regl, height_map_buffer), regl, resources, offset)
+	const terrain_mesh = res.terrain
+	const algae = res.algae
 
 	const pipeline_draw_terrain = regl({
 		attributes: {
@@ -115,6 +358,11 @@ export function init_terrain(regl, resources, height_map_buffer) {
 			mat_normals: regl.prop('mat_normals'),
 
 			light_position: regl.prop('light_position'),
+
+			fog_color: regl.prop('fog_color'),
+			closeFarThreshold: regl.prop('closeFarThreshold'),
+			minMaxIntensity: regl.prop('minMaxIntensity'),
+			useFog: regl.prop('useFog'),
 		},
 		elements: terrain_mesh.faces,
 
@@ -131,7 +379,7 @@ export function init_terrain(regl, resources, height_map_buffer) {
 			this.mat_model_to_world = mat4.create()
 		}
 
-		draw({mat_projection, mat_view, light_position_cam}) {
+		draw({mat_projection, mat_view, light_position_cam}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}) {
 			mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
 			mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
 	
@@ -145,9 +393,14 @@ export function init_terrain(regl, resources, height_map_buffer) {
 				mat_normals: this.mat_normals,
 		
 				light_position: light_position_cam,
+
+				fog_color: fog_color,
+				closeFarThreshold: closeFarThreshold,
+				minMaxIntensity: minMaxIntensity,
+				useFog: useFog,
 			})
 		}
 	}
 
-	return new TerrainActor()
+	return {terrain: new TerrainActor(), algae: algae}
 }

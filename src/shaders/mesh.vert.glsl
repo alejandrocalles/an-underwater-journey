@@ -39,7 +39,7 @@ void main()
 	//Basic geometry to get the vector going from vertex to light
 	v2f_dir_to_light = normalize(light_position - vertex_position_view).xyz;
 
-	dist_to_view = length(vertex_position_view.xyz);
-
+    dist_to_view = length(vertex_position_view.xyz);
+    
 	gl_Position = mat_mvp * position_v4;
 }
