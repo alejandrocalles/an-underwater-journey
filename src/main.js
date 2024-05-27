@@ -12,6 +12,8 @@ import { hexToRgb } from "./utils.js"
 import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
 import { load_mesh } from "./icg_mesh.js"
 
+import {initialize_boids, Boid, boids_update} from "./fish.js"
+
 
 async function main() {
 	/* const in JS means the variable will not be bound to a new value, but the value can be modified (if its an object or array)
@@ -209,6 +211,20 @@ async function main() {
 	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
 	let terrain_actor = ter.terrain
 	let algae = ter.algae
+
+
+	let boids_list = []
+
+	const mat_transform = mat4.create()
+
+	let num_boids = 100;
+	let centre_pull_threshold = 5;
+	let avoidance_distance = 0.12;
+	let avoidance_factor = 0.000;
+	let influence_distance = 0.1;
+	let swarming_tendency = 0.0003;
+	let flocking_tendency = 0.06;
+	initialize_boids(boids_list, num_boids);
 	
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
@@ -367,6 +383,45 @@ async function main() {
 	register_slider_with_dependency('slider-fog-min', 'slider-fog-max', change_fog_intensity)
 	register_color('color-fog', change_fog_color)
 
+	// const draw_boid = regl({
+	// 	// Vertex attributes
+	// 	attributes: {
+	// 		// 3 vertices with 2 coordinates each
+	// 		position: regl.prop('position'),
+	// 	},
+	// 	// Triangles (faces), as triplets of vertex indices
+	// 	elements: [
+	// 		[0, 1, 2],
+	// 	],
+
+	// 	vert: /*glsl*/`
+	// 	// Vertex attributes, specified in the "attributes" entry of the pipeline
+	// 	attribute vec2 position;
+				
+	// 	// Global variables specified in "uniforms" entry of the pipeline
+	// 	uniform mat4 mat_transform;
+
+	// 	void main() {
+	// 		// #TODO GL1.1.2.1 Edit the vertex shader to apply mat_transform to the vertex position.
+	// 		gl_Position = mat_transform * vec4(position, 0, 1);
+	// 	}`,
+		
+	// 	frag: /*glsl*/`
+	// 	precision mediump float;
+		
+	// 	uniform vec3 color;
+
+	// 	void main() {
+	// 		gl_FragColor = vec4(color, 1.); // output: RGBA in 0..1 range
+	// 	}`,
+
+	// 	// Uniforms: global data available to the shader
+	// 	uniforms: {
+	// 		mat_transform: regl.prop('mat_transform'),
+	// 		color: regl.prop('color'),
+	// 	},	
+	// })
+
 
 	/*---------------------------------------------------------------
 		Frame render
@@ -407,6 +462,15 @@ async function main() {
 			
 			
 			vec3.copy(cam_pos, campos)
+
+			boids_list = boids_update(boids_list, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let boid in boids_list) {
+				draw_boid({
+					mat_transform: mat_transform,
+					position: boid.shape,
+					color: boid.colour,
+				});
+			}
 			
 			
 			terrain_actor.draw(scene_info, fog_args, cam_pos)
