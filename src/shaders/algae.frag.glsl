@@ -18,9 +18,9 @@ uniform vec3 cam_pos;
 const float terrain_water_level    = 90.5;
 const vec3  light_color = vec3(1.0, 0.941, 0.898);
 // Small perturbation to prevent "z-fighting" on the water on some machines...
-const vec3  terrain_color_mountain = vec3(0.8, 0.5, 0.4);
-const vec3  terrain_color_grass    = vec3(0.33, 0.43, 0.18);
-const vec3  terrain_color_other    = vec3(0.0, 0.31, 0.13);
+const vec3  color_medium      = vec3(0.196, 0.58, 0.231);
+const vec3  color_deep    = vec3(0.09, 0.82, 0.263);
+const vec3  color_surface   = vec3(0.422, 0.418, 0.235);
 
 void main()
 {
@@ -41,10 +41,14 @@ void main()
 	vec3 material_color = vec3(0.0);
 	float shininess = 0.;
 
-    float weight = height/1000.;
-    material_color = mix(terrain_color_grass, terrain_color_mountain, weight);
-    material_color = mix(material_color, terrain_color_other, weight);
-    material_color = mix(material_color, terrain_color_mountain, weight);
+    float weight = height/96.;
+	if (height < terrain_water_level) {
+		material_color = mix(color_deep, color_medium, weight);
+		shininess = 3.;
+	} else {
+		material_color = color_surface;
+		shininess = 0.;
+	}
     shininess = 1.2;
 
 	/* #TODO PG1.6.1: apply the Blinn-Phong lighting model
@@ -65,10 +69,10 @@ void main()
 		float dtv = dist_to_view;
 		float fogFactor;
 		if (cam_pos.z < terrain_water_level && height > terrain_water_level - 0.01) {
-			fogFactor = clamp(pow(dtv - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), min(minMaxIntensity.y, 1.), minMaxIntensity.y);
+			fogFactor = clamp(pow(dtv - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), min(minMaxIntensity.y, 0.7), minMaxIntensity.y);
 		}
 		else if (cam_pos.z > terrain_water_level && height < terrain_water_level - 0.01) {
-			fogFactor = clamp(pow(dtv - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), max(minMaxIntensity.x, 0.2), minMaxIntensity.y);
+			fogFactor = clamp(pow(dtv - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), min(minMaxIntensity.y, 0.6), minMaxIntensity.y);
 		}
 		else {
 			fogFactor = clamp(pow(dtv - closeFarThreshold.x, 0.5) / (closeFarThreshold.y - closeFarThreshold.x), minMaxIntensity.x, minMaxIntensity.y);

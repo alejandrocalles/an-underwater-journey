@@ -80,8 +80,8 @@ async function main() {
 		"buffer_to_screen.vert.glsl",
 		"buffer_to_screen.frag.glsl",
 
-		"mesh.vert.glsl",
-		"mesh.frag.glsl",
+		"algae.vert.glsl",
+		"algae.frag.glsl",
 
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)

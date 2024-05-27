@@ -218,8 +218,8 @@ export function init_algae(regl, resources, position) {
 		},
 		elements: faces,
 
-		vert: resources['shaders/mesh.vert.glsl'],
-		frag: resources['shaders/mesh.frag.glsl'],
+		vert: resources['shaders/algae.vert.glsl'],
+		frag: resources['shaders/algae.frag.glsl'],
 	})
 
 
