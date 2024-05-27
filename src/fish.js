@@ -221,11 +221,12 @@ export class Boid {
             this.velocity = this.polarToCartesian(this.speed, this.orientation);
     }
 
-    polarToCartesian(radius, angle) {
-        let x = radius * Math.cos(angle)
-        let y = radius * Math.sin(angle)
+    polarToCartesian(radius, azimuth, elevation) {
+        let x = radius * Math.cos(azimuth)
+        let y = radius * Math.sin(azimuth)
+        let z = radius * Math.sin(elevation)
 
-        return [x, y];
+        return [x, y, z];
     }
 
     cartesianToPolar(x, y, z) {
