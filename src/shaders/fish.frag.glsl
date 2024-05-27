@@ -1,10 +1,5 @@
 precision mediump float;
 
-uniforms: {
-			mat_transform: regl.prop('mat_transform'),
-			color: regl.prop('color'),
-		},	
-
 uniform vec3 color;
 
 void main() {

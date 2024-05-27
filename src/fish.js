@@ -1,7 +1,9 @@
- 
- import {vec2, vec3, vec4, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
+import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
+import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
+import {mat4_matmul_many} from "./icg_math.js"
+import {compute_cube, index_to_v_index, vertex_interpolate} from "./Marching_cubes_functions.js"
+import { triTable, edge_table } from "./marching_cubes_tables.js"
 
- 
  export function boids_update(boids_list, centre_pull_threshold, repel_distance, repel_factor, influence_distance, swarming_tendency, flocking_tendency) {
     for (let boid of boids_list) {
         let cengrav = [0, 0];
@@ -45,7 +47,8 @@
     return boids_list;
 }
 
-export const initialize_boids = ((boids_list, num_boids) => {
+export function initialize_boids(regl, resources, num_boids) {
+    let boids_list = []
     for(let i = 0; i < num_boids; i++){
         let centre_x = Math.random()*2 - 1;
         let centre_y = Math.random()*2 - 1;
@@ -71,8 +74,69 @@ export const initialize_boids = ((boids_list, num_boids) => {
         // vec3.random(colour, 1);
         boids_list.push(new Boid(shape, position, velocity, acceleration, speed, x_y_angle, maxSpeed, maxForce, colour));
     }
-    return boids_list
-})
+
+    const pipeline_draw_boid = regl({
+		attributes: {
+			// 3 vertices with 2 coordinates each
+			position: regl.prop('position'),
+            // normal: terrain_mesh.vertex_normals,
+		},
+		// Triangles (faces), as triplets of vertex indices
+		elements: [
+			[0, 1, 2],
+		],
+
+		// Uniforms: global data available to the shader
+		uniforms: {
+			mat_mvp: regl.prop('mat_mvp'),
+			mat_model_view: regl.prop('mat_model_view'),
+			mat_normals: regl.prop('mat_normals'),
+
+			light_position: regl.prop('light_position'),
+
+			cam_pos: regl.prop('cam_pos'),
+
+			color: regl.prop('color'),
+		},	
+
+		vert: resources['shaders/fish.vert.glsl'],
+		frag: resources['shaders/fish.frag.glsl'],
+	})
+
+    class BoidActor {
+        constructor() {
+            this.mat_mvp = mat4.create()
+            this.mat_model_view = mat4.create()
+            this.mat_normals = mat3.create()
+            this.mat_model_to_world = mat4.create()
+        }
+    
+        draw({mat_projection, mat_view, light_position_cam}, cam_pos) {
+            mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
+            mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
+    
+            mat3.fromMat4(this.mat_normals, this.mat_model_view)
+            mat3.transpose(this.mat_normals, this.mat_normals)
+            mat3.invert(this.mat_normals, this.mat_normals)
+    
+            pipeline_draw_boid({
+                mat_mvp: this.mat_mvp,
+                mat_model_view: this.mat_model_view,
+                mat_normals: this.mat_normals,
+        
+                light_position: light_position_cam,
+    
+                cam_pos: cam_pos,
+            })
+        }
+    }
+    
+    return {boid: new BoidActor(), boids_list: boids_list}
+
+
+
+    //return boids_list
+}
 
 
 export class Boid {
@@ -187,4 +251,5 @@ export class Boid {
     }
   
     // Additional methods for behaviors (separation, alignment, cohesion) would go here
-  }
+}
+

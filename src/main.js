@@ -213,10 +213,6 @@ async function main() {
 	let algae = ter.algae
 
 
-	let boids_list = []
-
-	const mat_transform = mat4.create()
-
 	let num_boids = 100;
 	let centre_pull_threshold = 5;
 	let avoidance_distance = 0.12;
@@ -224,8 +220,10 @@ async function main() {
 	let influence_distance = 0.1;
 	let swarming_tendency = 0.0003;
 	let flocking_tendency = 0.06;
-	initialize_boids(boids_list, num_boids);
-	
+	let boid = initialize_boids(regl, resources, num_boids);
+	let boid_actor = boid.boid
+	let boids_list = boid.boids_list
+
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
 	
@@ -464,12 +462,9 @@ async function main() {
 			vec3.copy(cam_pos, campos)
 
 			boids_list = boids_update(boids_list, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
-			for (let boid in boids_list) {
-				draw_boid({
-					mat_transform: mat_transform,
-					position: boid.shape,
-					color: boid.colour,
-				});
+			boid_actor.draw(scene_info, cam_pos)
+			for (let i = 0; i < boids_list.length; i++) {
+				boids_list.draw(scene_info, cam_pos)
 			}
 			
 			
