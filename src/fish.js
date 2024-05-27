@@ -48,7 +48,41 @@ import { triTable, edge_table } from "./marching_cubes_tables.js"
 }
 
 export function initialize_boids(regl, resources, num_boids) {
+
+    class BoidActor {
+        constructor(boid) {
+            this.boid = boid
+            this.mat_mvp = mat4.create()
+            this.mat_model_view = mat4.create()
+            this.mat_normals = mat3.create()
+            this.mat_model_to_world = mat4.create()
+        }
+    
+        draw({mat_projection, mat_view, light_position_cam}, cam_pos) {
+            mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
+            mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
+    
+            mat3.fromMat4(this.mat_normals, this.mat_model_view)
+            mat3.transpose(this.mat_normals, this.mat_normals)
+            mat3.invert(this.mat_normals, this.mat_normals)
+    
+            pipeline_draw_boid({
+                position: this.boid.position,
+
+                mat_mvp: this.mat_mvp,
+                mat_model_view: this.mat_model_view,
+                mat_normals: this.mat_normals,
+        
+                light_position: light_position_cam,
+    
+                color: this.boid.colour,
+                cam_pos: cam_pos,
+            })
+        }
+    }
+
     let boids_list = []
+    let boids_actors = []
     for(let i = 0; i < num_boids; i++){
         let centre_x = Math.random()*2 - 1;
         let centre_y = Math.random()*2 - 1;
@@ -73,6 +107,7 @@ export function initialize_boids(regl, resources, num_boids) {
         let colour = [1, 1, 1];
         // vec3.random(colour, 1);
         boids_list.push(new Boid(shape, position, velocity, acceleration, speed, x_y_angle, maxSpeed, maxForce, colour));
+        boids_actors.push(new BoidActor(boids_list[i]))
     }
 
     const pipeline_draw_boid = regl({
@@ -103,35 +138,8 @@ export function initialize_boids(regl, resources, num_boids) {
 		frag: resources['shaders/fish.frag.glsl'],
 	})
 
-    class BoidActor {
-        constructor() {
-            this.mat_mvp = mat4.create()
-            this.mat_model_view = mat4.create()
-            this.mat_normals = mat3.create()
-            this.mat_model_to_world = mat4.create()
-        }
     
-        draw({mat_projection, mat_view, light_position_cam}, cam_pos) {
-            mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
-            mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
-    
-            mat3.fromMat4(this.mat_normals, this.mat_model_view)
-            mat3.transpose(this.mat_normals, this.mat_normals)
-            mat3.invert(this.mat_normals, this.mat_normals)
-    
-            pipeline_draw_boid({
-                mat_mvp: this.mat_mvp,
-                mat_model_view: this.mat_model_view,
-                mat_normals: this.mat_normals,
-        
-                light_position: light_position_cam,
-    
-                cam_pos: cam_pos,
-            })
-        }
-    }
-    
-    return {boid: new BoidActor(), boids_list: boids_list}
+    return {boids: boids_actors, boids_list: boids_list}
 
 
 

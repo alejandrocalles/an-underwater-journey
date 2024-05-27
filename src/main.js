@@ -85,6 +85,9 @@ async function main() {
 		"algae.vert.glsl",
 		"algae.frag.glsl",
 
+		"fish.vert.glsl",
+		"fish.frag.glsl",
+
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)
 	});
@@ -221,8 +224,10 @@ async function main() {
 	let swarming_tendency = 0.0003;
 	let flocking_tendency = 0.06;
 	let boid = initialize_boids(regl, resources, num_boids);
-	let boid_actor = boid.boid
+	let boid_actors = boid.boids
 	let boids_list = boid.boids_list
+
+	console.log(boid_actors)
 
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
@@ -462,9 +467,8 @@ async function main() {
 			vec3.copy(cam_pos, campos)
 
 			boids_list = boids_update(boids_list, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
-			boid_actor.draw(scene_info, cam_pos)
 			for (let i = 0; i < boids_list.length; i++) {
-				boids_list.draw(scene_info, cam_pos)
+				boid_actors[i].draw(scene_info, cam_pos)
 			}
 			
 			
