@@ -214,7 +214,7 @@ async function main() {
 
 	register_keyboard_action('w', () => {
 		let cam_to_target = vec3.subtract(vec3.create(), cam_target, campos)
-		cam_to_target[2] = 0
+		// cam_to_target[2] = 0
 		vec3.normalize(cam_to_target, cam_to_target)
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
 		vec3.add(campos, campos, cam_to_target)
@@ -225,7 +225,7 @@ async function main() {
 	})
 	register_keyboard_action('s', () => {
 		let cam_to_target = vec3.subtract(vec3.create(), cam_target, campos)
-		cam_to_target[2] = 0
+		// cam_to_target[2] = 0
 		vec3.normalize(cam_to_target, cam_to_target)
 		vec3.scale(cam_to_target, cam_to_target, cam_speed)
 		vec3.sub(campos, campos, cam_to_target)
