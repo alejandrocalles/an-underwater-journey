@@ -96,7 +96,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let campos = [-7, -7, 1]
+	let campos = [170, 250, 140]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -104,7 +104,7 @@ async function main() {
 	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
-	let cam_target = vec3.normalize(vec3.create(), vec3.negate([], campos))
+	let cam_target = [180, 180, 0]
 
 	let cam_speed = 1
 
@@ -145,14 +145,18 @@ async function main() {
 	window.addEventListener('mousemove', (event) => {
 		// if left or middle button is pressed
 		if (event.buttons & 1 || event.buttons & 4) {
+			let debug_bounds = debug_overlay.getBoundingClientRect()
+			if (debug_overlay.checkVisibility() && event.x < debug_bounds.x + debug_bounds.width && event.y < debug_bounds.y + debug_bounds.height) {
+				return
+			}
 			cam_angle_z += event.movementX * 0.001
 			cam_angle_y += event.movementY * 0.001
 		
 			vec3.sub(cam_target, cam_target, campos)
 			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
 
-			let xrot = event.movementY * 0.001 * Math.cos(cam_angle_z)
-			let yrot = event.movementY * 0.001 * Math.sin(cam_angle_z)
+			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
 
 			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
 			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
@@ -187,11 +191,14 @@ async function main() {
 		useFog: true,
 	}
 
+	fog_args.useFog = false;
+
 	
 	let terrain_width = 180
 	let terrain_height = 180
 	let terrain_depth = 96
 
+	let seed = 0
 	let textures = []
 	let fbm = 2 // <1 -> Perlin, >1 -> FBM
 	for (let i = 0; i < terrain_depth; i++) {
@@ -199,9 +206,12 @@ async function main() {
 		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
 		textures.push(tex)
 	}
-	const ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
-	const terrain_actor = ter.terrain
-	const algae = ter.algae
+	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
+	let terrain_actor = ter.terrain
+	let algae = ter.algae
+	
+
+	// const a = init_algae(regl, resources, [0, 0, 0])
 	
 
 	/*
@@ -210,7 +220,28 @@ async function main() {
 	register_keyboard_action('z', () => {
 		debug_overlay.classList.toggle('hide')
 	})
+	debug_overlay.classList.toggle('hide')
 
+
+	register_keyboard_action('r', () => {
+		update_needed = true
+		let seed = Math.random()
+		textures = []
+		fbm = 2 // <1 -> Perlin, >1 -> FBM
+		for (let i = 0; i < terrain_depth; i++) {
+			let texture = init_noise(regl, resources, fbm, seed)
+			let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
+			textures.push(tex)
+		}
+		ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
+		terrain_actor = ter.terrain
+		algae = ter.algae
+	})
+
+	register_keyboard_action('f', () => { 
+		fog_args.useFog = !fog_args.useFog; 
+		update_needed = true; 
+	})
 
 	register_keyboard_action('w', () => {
 		let cam_to_target = vec3.subtract(vec3.create(), cam_target, campos)
@@ -286,7 +317,7 @@ async function main() {
 		cam_angle_z = -1.0
 		cam_angle_y = -0.42
 		cam_distance_factor = 1.0
-		cam_target = [0, 0, 0]
+		cam_target = [80, 80, 0]
 		
 		update_cam_transform()
 		update_needed = true
@@ -311,6 +342,7 @@ async function main() {
 	}
 
 	function change_fog_intensity(min, max, minChanged) {
+		update_needed = true
 		let ret;
 		if (min > max && minChanged) {
 			fog_args.minMaxIntensity = [min, min]
@@ -335,7 +367,6 @@ async function main() {
 	register_slider_with_dependency('slider-fog-min', 'slider-fog-max', change_fog_intensity)
 	register_color('color-fog', change_fog_color)
 
-	register_button_with_hotkey('btn-fog', 'f', () => { fog_args.useFog = !fog_args.useFog; update_needed = true; })
 
 	/*---------------------------------------------------------------
 		Frame render
@@ -344,7 +375,7 @@ async function main() {
 	const mat_view = mat4.create()
 	const cam_pos = vec3.create()
 
-	let light_position_world = [0.2, -0.3, 0.8, 1.0]
+	let light_position_world = [10, -10, -200, 1.0]
 	//let light_position_world = [1, -1, 1., 1.0]
 
 	const light_position_cam = [0, 0, 0, 0]
@@ -357,7 +388,7 @@ async function main() {
 				deg_to_rad * 60, // fov y
 				frame.framebufferWidth / frame.framebufferHeight, // aspect ratio
 				0.01, // near
-				100, // far
+				300, // far
 			)
 
 			mat4.copy(mat_view, mat_turntable)
@@ -377,10 +408,12 @@ async function main() {
 			
 			vec3.copy(cam_pos, campos)
 			
+			
 			terrain_actor.draw(scene_info, fog_args, cam_pos)
 			for (let i = 0; i < algae.length; i++) {
 				algae[i].draw(scene_info, fog_args, cam_pos)
 			}
+			//a.draw(scene_info, fog_args, cam_pos)
 		}
 
 // 		debug_text.textContent = `

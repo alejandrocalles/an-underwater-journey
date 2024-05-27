@@ -285,6 +285,7 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 		}
 	}
 
+	/*
 	// add algae randomly if terrain is flat enough
 	for (let i = 0; i < faces.length; i++) {
 		for (let j = 0; j < 3; j++) {
@@ -304,6 +305,7 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 			}
 		}
 	}
+	*/
 
 	/*
 	// create a flat surface of water

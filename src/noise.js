@@ -14,7 +14,7 @@ const mesh_quad_2d = {
 	],
 }
 
-export function init_noise(regl, resources, fbm=0) {
+export function init_noise(regl, resources, fbm=0, seed_inp=135299032) {
 
 	// shader implementing all noise functions
 	const noise_library_code = resources['shaders/noise.frag.glsl']
@@ -83,7 +83,7 @@ export function init_noise(regl, resources, fbm=0) {
 		  gradP[i * 3 + 2] = gradP[i * 3 + 2 + 256] = grad3[v % 12][2];
 		}
 	};
-	seed(135299032);
+	seed(seed_inp);
 
 	const permTexture = regl.texture({
 		data: perm,

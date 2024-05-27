@@ -721,12 +721,12 @@ vec3 fade(vec3 t) {
 
 // Classic Perlin noise
 float haha(vec3 P) {
-    vec3 Pi0 = floor(P); // Integer part for indexing
-    vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
+    vec3 Pi0 = floor(P);
+    vec3 Pi1 = Pi0 + vec3(1.0);
     Pi0 = mod(Pi0, 289.0);
     Pi1 = mod(Pi1, 289.0);
-    vec3 Pf0 = fract(P); // Fractional part for interpolation
-    vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0
+    vec3 Pf0 = fract(P);
+    vec3 Pf1 = Pf0 - vec3(1.0);
     vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
     vec4 iy = vec4(Pi0.y, Pi0.y, Pi1.y, Pi1.y);
     vec4 iz0 = vec4(Pi0.z);
@@ -794,12 +794,12 @@ vec3 tex_fbm_3d(vec3 point, int fbm) {
 
 	if (fbm > 1) {
 		for (int i = 0; i < num_octaves; i++) {
-			result += pow(ampl_multiplier, float(i)) * haha(point3d * pow(1.4, float(i)));
+			result += pow(ampl_multiplier, float(i)) * pedro(point3d * pow(1.4, float(i)));
 		}
 
 		result = (result * 0.25) + 0.5;
 	} else {
-		result = (haha(point3d) * 0.25) + 0.5;
+		result = (pedro(point3d) * 0.25) + 0.5;
 	}
 
 	if (result > 0.5) {

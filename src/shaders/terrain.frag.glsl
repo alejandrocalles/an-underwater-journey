@@ -46,20 +46,20 @@ void main()
 
 	if (abs(height - terrain_water_level) < 0.1) {
 		material_color = terrain_color_water;
-		shininess = 30.;
+		shininess = 3.;
 	} else if (height > terrain_water_level) {
 		float weight = (height - terrain_water_level) / 6.;
 		material_color = mix(terrain_color_sand, terrain_color_stone, weight);
 		if (height > terrain_water_level + 1.) {
 			material_color = mix(material_color, terrain_color_grass, weight);
 		}
-		shininess = 4.;
+		shininess = 40.;
 	} else {
 		float weight = (height / terrain_water_level);
 		material_color = mix(terrain_color_sand, terrain_color_grass, weight);
 		material_color = mix(material_color, terrain_color_stone, 1. - weight);
 		material_color = mix(material_color, terrain_color_sand, weight);
-		shininess = 3.;
+		shininess = 30.;
 	}
 
 	/* #TODO PG1.6.1: apply the Blinn-Phong lighting model
