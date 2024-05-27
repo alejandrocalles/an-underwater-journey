@@ -106,7 +106,7 @@ async function main() {
 
 	let cam_target = [180, 180, 0]
 
-	let cam_speed = 1
+	let cam_speed = 0.5
 
 	let direction = false
 
@@ -172,17 +172,6 @@ async function main() {
 	/*---------------------------------------------------------------
 		Actors
 	---------------------------------------------------------------*/
-	/*
-	const noise_textures = init_noise(regl, resources)
-	
-	const texture_fbm_3d = (() => {
-		for(const t of noise_textures) {
-			//if(t.name === 'FBM') {
-			if(t.name === 'FBM_3d') {
-				return t
-			}
-		}
-	})()*/
 
 	const fog_args = {
 		fog_color: [0., 0., 1.],
@@ -191,7 +180,7 @@ async function main() {
 		useFog: true,
 	}
 
-	fog_args.useFog = false;
+	// fog_args.useFog = false;
 
 	
 	let terrain_width = 180
@@ -359,6 +348,7 @@ async function main() {
 	}
 
 	function change_fog_color(color) {
+		update_needed = true
 		let rgb = hexToRgb(color)
 		fog_args.fog_color = [rgb.r, rgb.g, rgb.b]
 	}
