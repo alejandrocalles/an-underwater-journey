@@ -101,7 +101,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let campos = [170, 250, 140]
+	let campos = [0, 0, 2]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -109,7 +109,7 @@ async function main() {
 	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
-	let cam_target = [180, 180, 0]
+	let cam_target = [0, 0, 0]
 
 	let cam_speed = 1
 
@@ -203,6 +203,7 @@ async function main() {
 	let terrain_height = 180
 	let terrain_depth = 96
 
+	/*
 	let seed = 0
 	let textures = []
 	let fbm = 2 // <1 -> Perlin, >1 -> FBM
@@ -213,21 +214,19 @@ async function main() {
 	}
 	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
 	let terrain_actor = ter.terrain
-	let algae = ter.algae
+	let algae = ter.algae*/
 
 
 	let num_boids = 100;
 	let centre_pull_threshold = 5;
-	let avoidance_distance = 0.12;
-	let avoidance_factor = 0.000;
-	let influence_distance = 0.1;
-	let swarming_tendency = 0.0003;
-	let flocking_tendency = 0.06;
+	let avoidance_distance = 20;
+	let avoidance_factor = 1;
+	let influence_distance = 30;
+	let swarming_tendency = 0.03;
+	let flocking_tendency = 6;
 	let boid = initialize_boids(regl, resources, num_boids);
 	let boid_actors = boid.boids
 	let boids_list = boid.boids_list
-
-	console.log(boid_actors)
 
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
@@ -236,6 +235,11 @@ async function main() {
 	/*
 		UI
 	*/
+	let dir = false
+	register_keyboard_action('l', () => {
+		dir = !dir
+	})
+
 	register_keyboard_action('z', () => {
 		debug_overlay.classList.toggle('hide')
 	})
@@ -472,12 +476,17 @@ async function main() {
 			}
 			
 			
-			terrain_actor.draw(scene_info, fog_args, cam_pos)
+			/*terrain_actor.draw(scene_info, fog_args, cam_pos)
 			for (let i = 0; i < algae.length; i++) {
 				algae[i].draw(scene_info, fog_args, cam_pos)
-			}
+			}*/
 			//a.draw(scene_info, fog_args, cam_pos)
+
+			if (dir) {
+				console.log(vec3.sub(vec3.create(), cam_target, campos))
+			}
 		}
+		update_needed = true
 
 // 		debug_text.textContent = `
 // Hello! Sim time is ${sim_time.toFixed(2)} s

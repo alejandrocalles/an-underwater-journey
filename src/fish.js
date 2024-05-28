@@ -67,7 +67,8 @@ export function initialize_boids(regl, resources, num_boids) {
             mat3.invert(this.mat_normals, this.mat_normals)
     
             pipeline_draw_boid({
-                position: this.boid.position,
+                position: this.boid.shape,
+                normal: this.boid.normal,
 
                 mat_mvp: this.mat_mvp,
                 mat_model_view: this.mat_model_view,
@@ -86,25 +87,27 @@ export function initialize_boids(regl, resources, num_boids) {
     for(let i = 0; i < num_boids; i++){
         let centre_x = Math.random()*2 - 1;
         let centre_y = Math.random()*2 - 1;
-        let centre_z = 0;
+        let centre_z = Math.random()*2 - 1;
         // let centre_x = -0.8;
         // let centre_y = 0.8;
         let speed = Math.random() / 500 + 0.008;
         let x_y_angle = Math.random();
+        let z_angle = Math.random();
         // let x_y_angle = 0.2
         
         let position = [centre_x, centre_y, centre_z];
+        vec3.scale(position, position, 50);
         let shape = [
-            [Math.cos(x_y_angle)*0.02, Math.sin(x_y_angle)*0.02],
-            [-Math.sin(x_y_angle)*0.01, Math.cos(x_y_angle)*0.01],
-            [Math.sin(x_y_angle)*0.01, -Math.cos(x_y_angle)*0.01],
+            [Math.cos(x_y_angle), Math.sin(x_y_angle), Math.sin(z_angle)],
+            [-Math.sin(x_y_angle), Math.cos(x_y_angle), Math.sin(z_angle)],
+            [Math.sin(x_y_angle), -Math.cos(x_y_angle), Math.sin(z_angle)],
         ];
         let velocity = [Math.cos(x_y_angle)*speed, Math.sin(x_y_angle)*speed, 0];
         let acceleration = [0,0,0];
         let maxSpeed = 0.001;
         let maxForce = 0.015;
 
-        let colour = [1, 1, 1];
+        let colour = [Math.random(), Math.random(), Math.random()];
         // vec3.random(colour, 1);
         boids_list.push(new Boid(shape, position, velocity, acceleration, speed, x_y_angle, maxSpeed, maxForce, colour));
         boids_actors.push(new BoidActor(boids_list[i]))
@@ -114,11 +117,11 @@ export function initialize_boids(regl, resources, num_boids) {
 		attributes: {
 			// 3 vertices with 2 coordinates each
 			position: regl.prop('position'),
-            // normal: terrain_mesh.vertex_normals,
+            normal: regl.prop('normal'),
 		},
 		// Triangles (faces), as triplets of vertex indices
 		elements: [
-			[0, 1, 2],
+			[[0, 1, 2]],
 		],
 
 		// Uniforms: global data available to the shader
@@ -132,7 +135,7 @@ export function initialize_boids(regl, resources, num_boids) {
 			cam_pos: regl.prop('cam_pos'),
 
 			color: regl.prop('color'),
-		},	
+		},
 
 		vert: resources['shaders/fish.vert.glsl'],
 		frag: resources['shaders/fish.frag.glsl'],
@@ -169,8 +172,11 @@ export class Boid {
 
             //Add total acceleration
             vec3.add(this.velocity, this.velocity, this.acceleration)
+            vec3.scale(this.velocity, this.velocity, 30)
+            
             // console.log(this.velocity)
-            this.speed, this.orientation = this.cartesianToPolar(this.velocity[0], this.velocity[1], this.velocity[2]);
+            let elevation;
+            this.speed, this.orientation, elevation = this.cartesianToPolar(this.velocity[0], this.velocity[1], this.velocity[2]);
             
             // if (vec2.distance(this.position, [0, 0]) > centre_pull_threshold) {
             //     this.applyCorrection(this.position, this.velocity, 0.04)
@@ -179,30 +185,35 @@ export class Boid {
 
             // Define the boid vertexes at origin, relative to orientation
             this.shape = [
-                [Math.cos(this.orientation)*0.02, Math.sin(this.orientation)*0.02, 0],
-                [-Math.sin(this.orientation)*0.01, Math.cos(this.orientation)*0.01, 0],
-                [Math.sin(this.orientation)*0.01, -Math.cos(this.orientation)*0.01, 0],
+                [Math.cos(this.orientation), Math.sin(this.orientation), elevation],
+                [-Math.sin(this.orientation), Math.cos(this.orientation), 0],
+                [Math.sin(this.orientation), -Math.cos(this.orientation), 0],
             ];
-
+            let n = vec3.create();
+            let v1 = vec3.sub([], this.shape[1], this.shape[0]);
+            let v2 = vec3.sub([], this.shape[2], this.shape[0]);
+            vec3.cross(n, v1, v2);
+            vec3.normalize(n, n);
+            this.normal = [n, n, n]
             
-            // this.speed = this.limit(this.speed, this.maxSpeed);
+            // this.speed = this.limit(this.speed, this.mapositionxSpeed);
             this.speed = this.mininum(this.speed, 0.003);
-            // console.log(this.speed)
-            this.velocity = this.polarToCartesian(this.speed, this.orientation);
+            this.velocity = this.polarToCartesian(this.speed, this.orientation, elevation);
 
+            this.acceleration = [0.0, 0.0, 0];
+            //console.log(this.position, this.velocity)
             vec3.add(this.position, this.position, this.velocity)
-            if (this.position[0] > 1) this.position[0] -= 2;
-            if (this.position[0] < -1) this.position[0] += 2;
-            if (this.position[1] > 1) this.position[1] -= 2;
-            if (this.position[1] < -1) this.position[1] += 2
-            if (this.position[2] > 1) this.position[2] -= 2;
-            if (this.position[2] < -1) this.position[2] += 2
+            if (this.position[0] > 50) this.acceleration[0] = 50 - this.position[0];
+            else if (this.position[0] < -10) this.acceleration[0] = -10 - this.position[0];
+            if (this.position[1] > 50) this.acceleration[1] = 50 - this.position[1];
+            else if (this.position[1] < -10) this.acceleration[1] = -10 - this.position[1];
+            if (this.position[2] > 10) this.acceleration[2] = 10 - this.position[2];
+            else if (this.position[2] < -50) this.acceleration[2] = -50 - this.position[2];
                 
             for (let i = 0; i < this.shape.length; i++){
                 vec3.add(this.shape[i], this.shape[i], this.position)
             }
             // this.acceleration = this.acceleration.multiply(0); // Reset acceleration
-            this.acceleration = [0.0, 0.0];
     }
   
     // Apply a force to the boid (considering maxForce)
@@ -218,7 +229,7 @@ export class Boid {
             vec3.cross(cross, original_direction_vec, desired_direction_vec);
             if (cross[2] > 0) this.orientation += correction_angle;
             else this.orientation -= correction_angle;
-            this.velocity = this.polarToCartesian(this.speed, this.orientation);
+            this.velocity = this.polarToCartesian(this.speed, this.orientation, this.position[2]);
     }
 
     polarToCartesian(radius, azimuth, elevation) {
@@ -237,9 +248,8 @@ export class Boid {
         if (z) {
             let elevation = Math.sin(z / radius_xy)
             return radius, azimuth, elevation
-        } 
-
-        return radius, azimuth;
+        }
+        return radius, azimuth, 1;
     }
 
     repel(repel_vector, repel_factor) {
