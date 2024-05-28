@@ -62,10 +62,10 @@ void main()
 		material_color = mix(terrain_color_sand, terrain_color_grass, weight);
 		material_color = mix(material_color, terrain_color_stone, 1. - weight);
 		material_color = mix(material_color, terrain_color_sand, weight);
+		material_color = mix(material_color, texture2D(u_water_texture, uv).xyz, 0.5);
 		shininess = 30.;
 	}
 
-	material_color = mix(material_color, texture2D(u_water_texture, uv).xyz, 0.5);
 
 	/* #TODO PG1.6.1: apply the Blinn-Phong lighting model
     	Add the Blinn-Phong implementation from GL2 here.

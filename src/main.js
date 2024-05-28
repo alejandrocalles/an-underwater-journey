@@ -12,6 +12,8 @@ import { hexToRgb } from "./utils.js"
 import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
 import { load_mesh } from "./icg_mesh.js"
 
+import { init_ptextures } from "./ptextures.js"
+
 
 async function main() {
 	/* const in JS means the variable will not be bound to a new value, but the value can be modified (if its an object or array)
@@ -71,6 +73,11 @@ async function main() {
 	const resources = {};
 
 	[
+		"ptextures/cellular.frag.glsl",
+
+		"posterization.vert.glsl",
+		"posterization.frag.glsl",
+
 		"noise.frag.glsl",
 		"display.vert.glsl",
 
@@ -202,6 +209,15 @@ async function main() {
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
 	
+	const texture_cel = init_ptextures(regl, resources)
+
+	const texture_buffer = texture_cel.get_buffer()
+
+	const water_texture = regl.texture({
+		width: texture_buffer.width,
+		height: texture_buffer.height,
+		data: regl.read({framebuffer: texture_buffer}),
+	})
 
 	/*
 		UI
@@ -385,25 +401,29 @@ async function main() {
 
 			// Calculate light position in camera frame
 			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
-
-			const scene_info = {
-				mat_view:        mat_view,
-				mat_projection:  mat_projection,
-				light_position_cam: light_position_cam,
-			}
-
-			// Set the whole image to black
-			regl.clear({color: [0.9, 0.9, 1., 1]})
-			
-			
 			vec3.copy(cam_pos, campos)
 			
-			
-			terrain_actor.draw(scene_info, fog_args, cam_pos)
-			for (let i = 0; i < algae.length; i++) {
-				algae[i].draw(scene_info, fog_args, cam_pos)
-			}
 			//a.draw(scene_info, fog_args, cam_pos)
+		}
+		// Draw cellular texture to buffer
+		texture_cel.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5, time : frame.tick * 0.02})
+		// Update texture 'object'
+		water_texture({
+			width: texture_buffer.width,
+			height: texture_buffer.height,
+			data: regl.read({framebuffer: texture_buffer})
+		})
+		const scene_info = {
+			mat_view:        mat_view,
+			mat_projection:  mat_projection,
+			light_position_cam: light_position_cam,
+			water_texture: water_texture,
+		}
+		// Clear the whole image
+		regl.clear({color: [0.9, 0.9, 1., 1]})
+		terrain_actor.draw(scene_info, fog_args, cam_pos)
+		for (let i = 0; i < algae.length; i++) {
+			algae[i].draw(scene_info, fog_args, cam_pos)
 		}
 
 // 		debug_text.textContent = `

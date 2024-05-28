@@ -12,9 +12,9 @@ vec2 random2d( vec2 p ) {
 }
 #define N_CENTERS 4
 #define CELLULAR_CENTER_RADIUS 0.005
-#define SCALE 15.0
+#define SCALE 50.0
 #define LIGHT_LEVEL 0.7
-#define TEXTURE_LIGHT vec3(0.1, 1.1, 1.2)
+#define TEXTURE_LIGHT vec3(0.0, 1.1, 1.2)
 
 vec3 tex_cellular(vec2 point, float time) {
 	vec3 pixel_color = vec3(0.);

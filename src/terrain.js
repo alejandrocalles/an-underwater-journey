@@ -362,6 +362,8 @@ export function init_terrain(regl, resources, height_map_buffer, offset) {
 
 			cam_pos: regl.prop('cam_pos'),
 
+			u_water_texture: regl.prop('water_texture'),
+
 			fog_color: regl.prop('fog_color'),
 			closeFarThreshold: regl.prop('closeFarThreshold'),
 			minMaxIntensity: regl.prop('minMaxIntensity'),
@@ -382,7 +384,7 @@ export function init_terrain(regl, resources, height_map_buffer, offset) {
 			this.mat_model_to_world = mat4.create()
 		}
 
-		draw({mat_projection, mat_view, light_position_cam}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}, cam_pos) {
+		draw({mat_projection, mat_view, light_position_cam, water_texture}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}, cam_pos) {
 			mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
 			mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
 	
@@ -398,6 +400,8 @@ export function init_terrain(regl, resources, height_map_buffer, offset) {
 				light_position: light_position_cam,
 
 				cam_pos: cam_pos,
+
+				water_texture: water_texture,
 
 				fog_color: fog_color,
 				closeFarThreshold: closeFarThreshold,
