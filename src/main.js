@@ -160,8 +160,8 @@ async function main() {
 			vec3.sub(cam_target, cam_target, campos)
 			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
 
-			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
-			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
+			let xrot = event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = event.movementY * 0.001 * Math.sin(cam_angle_z)
 
 			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
 			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
@@ -219,12 +219,12 @@ async function main() {
 
 	let num_boids = 100;
 	let centre_pull_threshold = 5;
-	let avoidance_distance = 20;
-	let avoidance_factor = 1;
-	let influence_distance = 30;
-	let swarming_tendency = 0.03;
-	let flocking_tendency = 6;
-	let boid = initialize_boids(regl, resources, num_boids);
+	let avoidance_distance = 8;
+	let avoidance_factor = 0.005;
+	let influence_distance = 10;
+	let swarming_tendency = 0.1;
+	let flocking_tendency = 0.2;
+	let boid = await initialize_boids(regl, resources, num_boids);
 	let boid_actors = boid.boids
 	let boids_list = boid.boids_list
 
