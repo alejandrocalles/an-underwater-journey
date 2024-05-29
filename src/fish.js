@@ -103,7 +103,7 @@ export async function initialize_boids(regl, resources, num_boids) {
         ];
         let velocity = [Math.random() + 0.01, Math.random() + 0.01, Math.random() + 0.01]
         let acceleration = [0,0,0];
-        let maxSpeed = (Math.random() + 1) / 30;
+        let maxSpeed = (Math.random() + 1) / 10;
         let maxForce = 3;
 
         let colour = [Math.random(), Math.random(), Math.random()];
@@ -201,6 +201,7 @@ export class Boid {
             let r_pos = vec3.rotateZ([], this.velocity, [0, 0, 0], -xy_angle)
             let xz_angle = vec3.angle([1, 0, 0], vec3.normalize([], r_pos))
             if (r_pos[0] < 0) xz_angle = - xz_angle
+            if (r_pos[2] < 0) xz_angle = - xz_angle
             let trans = mat4.fromTranslation(mat4.create(), this.position)
             let rot_horiz = mat4.fromZRotation(mat4.create(), xy_angle)
             let rot_vert = mat4.fromYRotation(mat4.create(), - xz_angle)
