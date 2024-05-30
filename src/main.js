@@ -550,23 +550,6 @@ async function main() {
 			// Calculate light position in camera frame
 			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
 			vec3.copy(cam_pos, campos)
-
-			boids_list1 = boids_update(boids_list1, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
-			for (let i = 0; i < boids_list1.length; i++) {
-				boid_actors1[i].draw(scene_info, fish_fog, cam_pos)
-			}
-
-			boids_list2 = boids_update(boids_list2, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
-			for (let i = 0; i < boids_list2.length; i++) {
-				boid_actors2[i].draw(scene_info, fish_fog, cam_pos)
-			}
-
-			boids_list3 = boids_update(boids_list3, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
-			for (let i = 0; i < boids_list3.length; i++) {
-				boid_actors3[i].draw(scene_info, fish_fog, cam_pos)
-			}
-			
-			//a.draw(scene_info, fog_args, cam_pos)
 		}
 		// Draw cellular texture to buffer
 		texture_cel.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5, time : frame.tick * 0.02})
@@ -590,6 +573,21 @@ async function main() {
 			terrain_actor.draw(scene_info, fog_args, cam_pos)
 			for (let i = 0; i < algae.length; i++) {
 				algae[i].draw(scene_info, fog_args, cam_pos)
+			}
+
+			boids_list1 = boids_update(boids_list1, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list1.length; i++) {
+				boid_actors1[i].draw(scene_info, fish_fog, cam_pos)
+			}
+
+			boids_list2 = boids_update(boids_list2, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list2.length; i++) {
+				boid_actors2[i].draw(scene_info, fish_fog, cam_pos)
+			}
+
+			boids_list3 = boids_update(boids_list3, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list3.length; i++) {
+				boid_actors3[i].draw(scene_info, fish_fog, cam_pos)
 			}
 
 			if (direction) {
