@@ -415,4 +415,3 @@ vec3 tex_fbm_3d(vec3 point, int fbm) {
 
 	return vec3(result);
 }
-
