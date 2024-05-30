@@ -220,8 +220,8 @@ async function main() {
 	let terrain_actor = ter.terrain
 	let algae = ter.algae
 	
-
-	let num_boids = 70;
+	// initialize boids, framerate starts to lower when going over 300 total boids
+	let num_boids = 60;
 	let centre_pull_threshold = 5;
 	let avoidance_distance = 5;
 	let avoidance_factor = 0.000003;
@@ -232,9 +232,9 @@ async function main() {
 	let size = 0.3
 
 	let box1 = {
-		x: [23, 55],
-		y: [90, 153],
-		z: [69, 86]
+		x: [124, 162],
+		y: [82, 118],
+		z: [10, 64]
 	}
 	let boid1 = await initialize_boids(regl, resources, num_boids, box1, size, max_speed);
 	let boid_actors1 = boid1.boids
@@ -245,7 +245,7 @@ async function main() {
 		y: [93, 141],
 		z: [72, 89]
 	}
-	num_boids = 30
+	num_boids = 60
 	let boid2 = await initialize_boids(regl, resources, num_boids, box2, size, max_speed);
 	let boid_actors2 = boid2.boids
 	let boids_list2 = boid2.boids_list
@@ -255,7 +255,7 @@ async function main() {
 		y: [55, 128],
 		z: [11, 21]
 	}
-	num_boids = 250
+	num_boids = 150
 	let boid3 = await initialize_boids(regl, resources, num_boids, box3, size, max_speed);
 	let boid_actors3 = boid3.boids
 	let boids_list3 = boid3.boids_list
