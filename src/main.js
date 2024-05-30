@@ -228,10 +228,7 @@ async function main() {
 	let influence_distance = 40;
 	let swarming_tendency = 1.4;
 	let flocking_tendency = 0.4;
-	let boid = await initialize_boids(regl, resources, num_boids);
-	let boid_actors = boid.boids
-	let boids_list = boid.boids_list
-	let max_speed = 0.16
+	let max_speed = 0.4
 	let size = [0.3, 0.5, 0.3]
 
 	let box1 = {
