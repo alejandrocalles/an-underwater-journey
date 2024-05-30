@@ -16,6 +16,8 @@ import {initialize_boids, Boid, boids_update} from "./fish.js"
 import { init_ptextures } from "./ptextures.js"
 import { long_bezier_curve } from "./bezier.js"
 
+import { CanvasVideoRecording } from "./icg_screenshot.js"
+
 const PRESET_PATHS = [
 	[
 		[170, 170, 100],
