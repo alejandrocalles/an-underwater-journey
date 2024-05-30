@@ -223,12 +223,12 @@ async function main() {
 	// initialize boids, framerate starts to lower when going over 300 total boids
 	let num_boids = 60;
 	let centre_pull_threshold = 5;
-	let avoidance_distance = 5;
-	let avoidance_factor = 0.000003;
-	let influence_distance = 13;
-	let swarming_tendency = 0.06;
-	let flocking_tendency = 0.09;
-	let max_speed = 0.16
+	let avoidance_distance = 3.5;
+	let avoidance_factor = 2;
+	let influence_distance = 40;
+	let swarming_tendency = 1.4;
+	let flocking_tendency = 0.4;
+	let max_speed = 0.2
 	let size = [0.3, 0.5, 0.3]
 
 	let box1 = {
