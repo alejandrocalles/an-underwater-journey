@@ -11,6 +11,7 @@ import {init_algae} from "./algae.js"
 import { hexToRgb } from "./utils.js"
 import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
 import { load_mesh } from "./icg_mesh.js"
+import {initialize_boids, Boid, boids_update} from "./fish.js"
 
 import { init_ptextures } from "./ptextures.js"
 import { long_bezier_curve } from "./bezier.js"
@@ -99,6 +100,9 @@ async function main() {
 		"algae.vert.glsl",
 		"algae.frag.glsl",
 
+		"fish.vert.glsl",
+		"fish.frag.glsl",
+
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)
 	});
@@ -112,7 +116,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let campos = [170, 250, 140]
+	let campos = [53, 78, 105]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -120,7 +124,7 @@ async function main() {
 	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
-	let cam_target = [180, 180, 0]
+	let cam_target = [180, 180, 70]
 
 	let cam_speed = 0.5
 
@@ -171,8 +175,8 @@ async function main() {
 			vec3.sub(cam_target, cam_target, campos)
 			vec3.rotateZ(cam_target, cam_target, [0, 0, 0], event.movementX * 0.001)
 
-			let xrot = - event.movementY * 0.001 * Math.cos(cam_angle_z)
-			let yrot = - event.movementY * 0.001 * Math.sin(cam_angle_z)
+			let xrot = event.movementY * 0.001 * Math.cos(cam_angle_z)
+			let yrot = event.movementY * 0.001 * Math.sin(cam_angle_z)
 
 			vec3.rotateY(cam_target, cam_target, [0, 0, 0], yrot)
 			vec3.rotateX(cam_target, cam_target, [0, 0, 0], xrot)
@@ -195,15 +199,20 @@ async function main() {
 		minMaxIntensity: [0.05, 0.9],
 		useFog: true,
 	}
-
-	// fog_args.useFog = false;
+	
+	let fish_fog_intensity_factor = 0.7
+	const fish_fog = {
+		fog_color: fog_args.fog_color,
+		closeFarThreshold: fog_args.closeFarThreshold,
+		minMaxIntensity: vec2.scale([], fog_args.minMaxIntensity, fish_fog_intensity_factor),
+		useFog: fog_args.useFog,
+	}
 
 	
 	let terrain_width = 180
 	let terrain_height = 180
 	let terrain_depth = 96
 
-	let seed = 0
 	let textures = []
 	let fbm = 2 // <1 -> Perlin, >1 -> FBM
 	for (let i = 0; i < terrain_depth; i++) {
@@ -215,6 +224,46 @@ async function main() {
 	let terrain_actor = ter.terrain
 	let algae = ter.algae
 	
+	// initialize boids, framerate starts to lower when going over 300 total boids
+	let num_boids = 60;
+	let centre_pull_threshold = 5;
+	let avoidance_distance = 3.5;
+	let avoidance_factor = 2;
+	let influence_distance = 40;
+	let swarming_tendency = 1.4;
+	let flocking_tendency = 0.4;
+	let max_speed = 0.2
+	let size = [0.3, 0.5, 0.3]
+
+	let box1 = {
+		x: [122, 153],
+		y: [75, 112],
+		z: [40, 64]
+	}
+	let boid1 = await initialize_boids(regl, resources, num_boids, box1, size, max_speed);
+	let boid_actors1 = boid1.boids
+	let boids_list1 = boid1.boids_list
+
+	let box2 = {
+		x: [43, 63],
+		y: [93, 141],
+		z: [72, 89]
+	}
+	num_boids = 60
+	let boid2 = await initialize_boids(regl, resources, num_boids, box2, size, max_speed);
+	let boid_actors2 = boid2.boids
+	let boids_list2 = boid2.boids_list
+
+	let box3 = {
+		x: [12, 39],
+		y: [85, 130],
+		z: [11, 27]
+	}
+	num_boids = 150
+	let boid3 = await initialize_boids(regl, resources, num_boids, box3, size, max_speed);
+	let boid_actors3 = boid3.boids
+	let boids_list3 = boid3.boids_list
+
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
 	
@@ -243,6 +292,10 @@ async function main() {
 	/*
 		UI
 	*/
+	register_keyboard_action('l', () => {
+		direction = !direction
+	})
+
 	register_keyboard_action('z', () => {
 		debug_overlay.classList.toggle('hide')
 	})
@@ -266,6 +319,7 @@ async function main() {
 
 	register_keyboard_action('f', () => { 
 		fog_args.useFog = !fog_args.useFog; 
+		fish_fog.useFog = !fish_fog.useFog;
 		update_needed = true; 
 	})
 
@@ -355,14 +409,17 @@ async function main() {
 		update_needed = true
 		if (close > far && closeChanged) {
 			fog_args.closeFarThreshold = [close, close]
+			fish_fog.closeFarThreshold = [close, close]
 			return [close, close, true]
 		}
 		else if (far < close && !closeChanged) {
 			fog_args.closeFarThreshold = [far, far]
+			fish_fog.closeFarThreshold = [far, far]
 			return [far, far, true]
 		}
 		else {
 			fog_args.closeFarThreshold = [close, far]
+			fish_fog.closeFarThreshold = [close, far]
 			return [close, far, false]
 		}
 	}
@@ -372,14 +429,17 @@ async function main() {
 		let ret;
 		if (min > max && minChanged) {
 			fog_args.minMaxIntensity = [min, min]
+			fish_fog.minMaxIntensity = [min * fish_fog_intensity_factor, min * fish_fog_intensity_factor]
 			return [min, min, true]
 		}
 		else if (max < min && !minChanged) {
 			fog_args.minMaxIntensity = [max, max]
+			fish_fog.minMaxIntensity = [max * fish_fog_intensity_factor, max * fish_fog_intensity_factor]
 			return [max, max, true]
 		}
 		else {
 			fog_args.minMaxIntensity = [min, max]
+			fish_fog.minMaxIntensity = [min * fish_fog_intensity_factor, max * fish_fog_intensity_factor]
 			return [min, max, false]
 		}
 	}
@@ -388,6 +448,7 @@ async function main() {
 		update_needed = true
 		let rgb = hexToRgb(color)
 		fog_args.fog_color = [rgb.r, rgb.g, rgb.b]
+		fish_fog.fog_color = fog_args.fog_color
 	}
 
 	register_slider_with_dependency('slider-fog-close', 'slider-fog-far', change_fog_distance)
@@ -489,8 +550,6 @@ async function main() {
 			// Calculate light position in camera frame
 			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
 			vec3.copy(cam_pos, campos)
-			
-			//a.draw(scene_info, fog_args, cam_pos)
 		}
 		// Draw cellular texture to buffer
 		texture_cel.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5, time : frame.tick * 0.02})
@@ -515,6 +574,26 @@ async function main() {
 			for (let i = 0; i < algae.length; i++) {
 				algae[i].draw(scene_info, fog_args, cam_pos)
 			}
+
+			boids_list1 = boids_update(boids_list1, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list1.length; i++) {
+				boid_actors1[i].draw(scene_info, fish_fog, cam_pos)
+			}
+
+			boids_list2 = boids_update(boids_list2, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list2.length; i++) {
+				boid_actors2[i].draw(scene_info, fish_fog, cam_pos)
+			}
+
+			boids_list3 = boids_update(boids_list3, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list3.length; i++) {
+				boid_actors3[i].draw(scene_info, fish_fog, cam_pos)
+			}
+
+			if (direction) {
+				console.log(vec3.normalize([], vec3.sub(vec3.create(), cam_target, campos)))
+				console.log(cam_pos)
+			}
 		})
 
 		if (posterize_scene) {
@@ -525,6 +604,7 @@ async function main() {
 		} else {
 			draw_fbo_to_screen()
 		}
+		update_needed = true
 
 // 		debug_text.textContent = `
 // Hello! Sim time is ${sim_time.toFixed(2)} s
