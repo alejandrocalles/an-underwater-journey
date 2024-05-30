@@ -221,9 +221,9 @@ async function main() {
 	let size = [0.3, 0.5, 0.3]
 
 	let box1 = {
-		x: [124, 162],
-		y: [82, 118],
-		z: [10, 64]
+		x: [122, 153],
+		y: [75, 112],
+		z: [40, 64]
 	}
 	let boid1 = await initialize_boids(regl, resources, num_boids, box1, size, max_speed);
 	let boid_actors1 = boid1.boids
