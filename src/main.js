@@ -101,7 +101,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let campos = [0, 0, 2]
+	let campos = [53, 78, 105]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -109,7 +109,7 @@ async function main() {
 	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
-	let cam_target = [0, 0, 0]
+	let cam_target = [180, 180, 70]
 
 	let cam_speed = 1
 
@@ -203,7 +203,7 @@ async function main() {
 	let terrain_height = 180
 	let terrain_depth = 96
 
-	/*
+	
 	let seed = 0
 	let textures = []
 	let fbm = 2 // <1 -> Perlin, >1 -> FBM
@@ -214,19 +214,45 @@ async function main() {
 	}
 	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
 	let terrain_actor = ter.terrain
-	let algae = ter.algae*/
+	let algae = ter.algae
+	
 
-
-	let num_boids = 100;
+	let num_boids = 70;
 	let centre_pull_threshold = 5;
-	let avoidance_distance = 8;
-	let avoidance_factor = 0.005;
-	let influence_distance = 10;
-	let swarming_tendency = 0.1;
-	let flocking_tendency = 0.2;
-	let boid = await initialize_boids(regl, resources, num_boids);
-	let boid_actors = boid.boids
-	let boids_list = boid.boids_list
+	let avoidance_distance = 5;
+	let avoidance_factor = 0.000003;
+	let influence_distance = 11;
+	let swarming_tendency = 0.04;
+	let flocking_tendency = 0.08;
+	let max_speed = 0.16
+	let size = 0.3
+
+	let box1 = {
+		x: [23, 55],
+		y: [90, 153],
+		z: [69, 86]
+	}
+	let boid1 = await initialize_boids(regl, resources, num_boids, box1, size, max_speed);
+	let boid_actors1 = boid1.boids
+	let boids_list1 = boid1.boids_list
+
+	let box2 = {
+		x: [43, 63],
+		y: [93, 141],
+		z: [72, 89]
+	}
+	let boid2 = await initialize_boids(regl, resources, num_boids, box2, size, max_speed);
+	let boid_actors2 = boid2.boids
+	let boids_list2 = boid2.boids_list
+
+	let box3 = {
+		x: [15, 34],
+		y: [55, 128],
+		z: [11, 21]
+	}
+	let boid3 = await initialize_boids(regl, resources, num_boids, box3, size, max_speed);
+	let boid_actors3 = boid3.boids
+	let boids_list3 = boid3.boids_list
 
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
@@ -235,9 +261,8 @@ async function main() {
 	/*
 		UI
 	*/
-	let dir = false
 	register_keyboard_action('l', () => {
-		dir = !dir
+		direction = !direction
 	})
 
 	register_keyboard_action('z', () => {
@@ -470,20 +495,31 @@ async function main() {
 			
 			vec3.copy(cam_pos, campos)
 
-			boids_list = boids_update(boids_list, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
-			for (let i = 0; i < boids_list.length; i++) {
-				boid_actors[i].draw(scene_info, cam_pos)
+			boids_list1 = boids_update(boids_list1, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list1.length; i++) {
+				boid_actors1[i].draw(scene_info, fog_args, cam_pos)
+			}
+
+			boids_list2 = boids_update(boids_list2, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list2.length; i++) {
+				boid_actors2[i].draw(scene_info, fog_args, cam_pos)
+			}
+
+			boids_list3 = boids_update(boids_list3, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list3.length; i++) {
+				boid_actors3[i].draw(scene_info, fog_args, cam_pos)
 			}
 			
 			
-			/*terrain_actor.draw(scene_info, fog_args, cam_pos)
+			terrain_actor.draw(scene_info, fog_args, cam_pos)
 			for (let i = 0; i < algae.length; i++) {
 				algae[i].draw(scene_info, fog_args, cam_pos)
-			}*/
+			}
 			//a.draw(scene_info, fog_args, cam_pos)
 
-			if (dir) {
-				console.log(vec3.sub(vec3.create(), cam_target, campos))
+			if (direction) {
+				console.log(vec3.normalize([], vec3.sub(vec3.create(), cam_target, campos)))
+				console.log(cam_pos)
 			}
 		}
 		update_needed = true

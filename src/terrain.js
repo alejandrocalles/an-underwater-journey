@@ -285,7 +285,7 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 		}
 	}
 
-	/*
+	
 	// add algae randomly if terrain is flat enough
 	for (let i = 0; i < faces.length; i++) {
 		for (let j = 0; j < 3; j++) {
@@ -301,11 +301,10 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 					let v = vec3.clone(vertices[index])
 					algae.push(init_algae(regl, resources, v))
 				}
-				console.log("algae")
 			}
 		}
 	}
-	*/
+	
 
 	/*
 	// create a flat surface of water
@@ -330,7 +329,6 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 	}*/
 
 
-	console.log(vertices, normals, faces, algae)
 	return {terrain: {
 		vertex_positions: vertices,
 		vertex_normals: normals,
@@ -342,8 +340,6 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 
 
 export function init_terrain(regl, resources, height_map_buffer, offset) {
-	console.log(offset)
-
 	const res = terrain_build_mesh(new BufferData(regl, height_map_buffer), regl, resources, offset)
 	const terrain_mesh = res.terrain
 	const algae = res.algae

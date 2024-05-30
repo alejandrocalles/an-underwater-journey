@@ -3,17 +3,11 @@ export function random_between(min, max) {
     return Math.random() * (max - min) + min
 }
 
-
+// https://stackoverflow.com/questions/29325069/how-to-generate-random-numbers-biased-towards-one-value-in-a-range
 export function biased_random(min, max, biasTowards) {
-    const range = max - min;
-    const mean = biasTowards;
-    const standardDeviation = range / 3;
-    
-    let num = (Math.random() + Math.random() + Math.random()) / 3;
-    num = num * standardDeviation + mean;
-
-    num = Math.max(min, Math.min(max, num));
-    return num;
+    const r = random_between(min, max)
+    const mix = Math.random()
+    return r * (1 - mix) + biasTowards * mix
 }
 
 
