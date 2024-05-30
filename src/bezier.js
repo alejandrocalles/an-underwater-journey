@@ -26,18 +26,15 @@ function deriv_bezier_deg4(a, b, c, d, time) {
     const v1 = vec3.scale(vec3.create(), vec3.subtract(vec3.create(), b, a), c1)
     const v2 = vec3.scale(vec3.create(), vec3.subtract(vec3.create(), c, b), c2)
     const v3 = vec3.scale(vec3.create(), vec3.subtract(vec3.create(), d, c), c3)
-    return vec3.normalize(
+    return vec3.add(
         vec3.create(),
         vec3.add(
             vec3.create(),
-            vec3.add(
-                vec3.create(),
-                v1,
-                v2
-            ),
-            v3
-        )
-    )
+            v1,
+            v2
+        ),
+        v3
+    );
 }
 
 /**

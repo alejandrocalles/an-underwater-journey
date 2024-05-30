@@ -14,16 +14,25 @@ import { load_mesh } from "./icg_mesh.js"
 import {initialize_boids, Boid, boids_update} from "./fish.js"
 
 import { init_ptextures } from "./ptextures.js"
-import { long_bezier_curve } from "./bezier.js"
+import { long_bezier_curve, reflect } from "./bezier.js"
 
 import { CanvasVideoRecording } from "./icg_screenshot.js"
 
 const PRESET_PATHS = [
 	[
-		[170, 170, 100],
-		[30, 150, 70],
-		[30, 30, 20],
-		[170, 10, 50],
+		[132, 171, 112],
+		[85, 151, 104],
+		[44, 117, 66],
+		[18, 103, 37],
+	],
+	[
+		[18, 103, 37],
+		[44, 117, 66],
+		[85, 151, 104],
+		[132, 171, 112],
+		[179, 191, 120],
+		[120, 128, 117],
+		[134, 99, 102]
 	]
 ]
 
@@ -125,7 +134,8 @@ async function main() {
 
 		"fish.vert.glsl",
 		"fish.frag.glsl",
-
+		"bezier/show.vert.glsl",
+        "bezier/show.frag.glsl",
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)
 	});
@@ -312,6 +322,44 @@ async function main() {
 		count: 3,
 	})
 
+	// BEZIER
+	const show_control_points = regl({
+		attributes: {
+			position: regl.prop('control_points')
+		},
+		vert: resources['shaders/bezier/show.vert.glsl'],
+		frag: resources['shaders/bezier/show.frag.glsl'],
+		uniforms: {
+			mat_view: regl.prop('mat_view'),
+			mat_projection: regl.prop('mat_projection'),
+			color: [1, 0, 0], // Control points in red
+		},
+		primitive: 'points',
+		count: regl.prop('count')
+	})
+
+	const num_points = 100
+	function discrete_curve(control_points) {
+		return [...Array(num_points).keys()]
+			.map((k) => k / num_points)
+			.map((t) => long_bezier_curve(control_points, t, [0, 0, 0], false).camera_position)
+	}
+
+	const show_curve = regl({
+		attributes: {
+			position: (context, props, batchId) => discrete_curve(props.control_points)
+		},
+		vert: resources['shaders/bezier/show.vert.glsl'],
+		frag: resources['shaders/bezier/show.frag.glsl'],
+		uniforms: {
+			mat_view: regl.prop('mat_view'),
+			mat_projection: regl.prop('mat_projection'),
+			color: [0, 1, 0], // Curve is green
+		},
+		primitive: 'points',
+		count: num_points
+	})
+
 	/*
 		UI
 	*/
@@ -493,6 +541,11 @@ async function main() {
 		lookAtTarget = !lookAtTarget
 	})
 
+	let showCurve = false
+	register_keyboard_action('.', () => {
+		showCurve = !showCurve
+	})
+
 	/*---------------------------------------------------------------
 		Main FrameBuffer
 	---------------------------------------------------------------*/
@@ -546,13 +599,13 @@ async function main() {
 				deg_to_rad * 60, // fov y
 				viewportWidth / viewportHeight, // aspect ratio
 				0.01, // near
-				100, // far
+				300, // far
 			)
 			const time = 0.005 * (tick % 200)
 			const {bezier_view, camera_position} = long_bezier_curve(
 				PRESET_PATHS[0],
 				time,
-				[90, 90, 36],
+				[150, 150, 70],
 				lookAtTarget,
 			)
 			mat4.copy(mat_view, bezier_view)
@@ -618,7 +671,23 @@ async function main() {
 				console.log(cam_pos)
 			}
 		})
-
+		if (showCurve) {
+			regl({
+				framebuffer: fbo
+			})(() => {
+				show_control_points({
+					mat_view:        mat_view,
+					mat_projection:  mat_projection,
+					control_points : PRESET_PATHS[0],
+					count: PRESET_PATHS[0].length,
+				})
+				show_curve({
+					mat_view:        mat_view,
+					mat_projection:  mat_projection,
+					control_points : PRESET_PATHS[0],
+				})
+			})
+		}
 		if (posterize_scene) {
 			posterize({
 				source: fbo,
