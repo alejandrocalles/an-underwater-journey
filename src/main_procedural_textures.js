@@ -1,19 +1,15 @@
 import {createREGL} from "../lib/regljs_2.1.0/regl.module.js"
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
-
-import {DOM_loaded_promise, load_text, register_button_with_hotkey, register_keyboard_action, register_slider_with_dependency, register_color} from "./icg_web.js"
 import {deg_to_rad, mat4_to_string, vec_to_string, mat4_matmul_many} from "./icg_math.js"
 
+import {DOM_loaded_promise, load_text, register_button_with_hotkey, register_keyboard_action, register_slider_with_dependency, register_color} from "./icg_web.js"
+
+import {init_ptextures} from "./ptextures.js"
 import {init_noise} from "./noise.js"
+import {bezier_curve, long_bezier_curve} from "./bezier.js"
 import {init_terrain} from "./terrain.js"
-import {init_algae} from "./algae.js"
 
 import { hexToRgb } from "./utils.js"
-import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
-import { load_mesh } from "./icg_mesh.js"
-
-import { init_ptextures } from "./ptextures.js"
-import { long_bezier_curve } from "./bezier.js"
 
 const PRESET_PATHS = [
 	[
@@ -25,29 +21,18 @@ const PRESET_PATHS = [
 ]
 
 async function main() {
-	/* const in JS means the variable will not be bound to a new value, but the value can be modified (if its an object or array)
-		https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/const
-	*/
-
 	const debug_overlay = document.getElementById('debug-overlay')
-
-	// We are using the REGL library to work with webGL
-	// http://regl.party/api
-	// https://github.com/regl-project/regl/blob/master/API.md
-
-	const regl = createREGL({ // the canvas to use
-		profile: true, // if we want to measure the size of buffers/textures in memory
-		extensions: ['oes_texture_float', "OES_element_index_uint"], // enable float textures
+	const regl = createREGL({
+		profile: true,
+		extensions: ['oes_texture_float', 'WEBGL_color_buffer_float', 'OES_element_index_uint'],
 	})
-
-	// The <canvas> (HTML element for drawing graphics) was created by REGL, lets take a handle to it.
 	const canvas_elem = document.getElementsByTagName('canvas')[0]
 
-
+	/*---------------------------------------------------------------
+		Canvas resizing
+	---------------------------------------------------------------*/
 	let update_needed = true
-
 	{
-		// Resize canvas to fit the window, but keep it square.
 		function resize_canvas() {
 			canvas_elem.width = window.innerWidth
 			canvas_elem.height = window.innerHeight
@@ -61,32 +46,9 @@ async function main() {
 	/*---------------------------------------------------------------
 		Resource loading
 	---------------------------------------------------------------*/
-
-	/*
-	The textures fail to load when the site is opened from local file (file://) due to "cross-origin".
-	Solutions:
-	* run a local webserver
-		caddy file-server -browse -listen 0.0.0.0:8000 -root .
-		# or
-		python -m http.server 8000
-		# open localhost:8000
-	OR
-	* run chromium with CLI flag
-		"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --allow-file-access-from-files index.html
-
-	* edit config in firefox
-		security.fileuri.strict_origin_policy = false
-	*/
-
 	// Start downloads in parallel
 	const resources = {};
-
 	[
-		"ptextures/cellular.frag.glsl",
-
-		"posterization.vert.glsl",
-		"posterization.frag.glsl",
-
 		"noise.frag.glsl",
 		"display.vert.glsl",
 
@@ -96,18 +58,20 @@ async function main() {
 		"buffer_to_screen.vert.glsl",
 		"buffer_to_screen.frag.glsl",
 
+		"ptextures/cellular.frag.glsl",
+
+		"posterization.vert.glsl",
+		"posterization.frag.glsl",
+
 		"algae.vert.glsl",
 		"algae.frag.glsl",
-
 	].forEach((shader_filename) => {
 		resources[`shaders/${shader_filename}`] = load_text(`./src/shaders/${shader_filename}`)
 	});
-
 	// Wait for all downloads to complete
 	for (const key of Object.keys(resources)) {
 		resources[key] = await resources[key]
 	}
-
 
 	/*---------------------------------------------------------------
 		Camera
@@ -127,34 +91,104 @@ async function main() {
 	let direction = false
 
 	function update_cam_transform() {
-		/* #TODO PG1.0 Copy camera controls
-		* Copy your solution to Task 2.2 of assignment 5.
-		Calculate the world-to-camera transformation matrix.
-		The camera orbits the scene
-		* cam_distance_base * cam_distance_factor = distance of the camera from the (0, 0, 0) point
-		* cam_angle_z - camera ray's angle around the Z axis
-		* cam_angle_y - camera ray's angle around the Y axis
-
-		* cam_target - the point we orbit around
-		*/
 		let up_vect = [0, 0, 1];
 		if (Math.cos(cam_angle_y) < 0.) {
 			up_vect = [0, 0, -1];
 		}
-		// Example camera matrix, looking along forward-X, edit this
 		const look_at = mat4.lookAt(mat4.create(), 
 			campos, // camera position in world coord
 			cam_target, // view target point
 			up_vect, // up vector
 		)
-		// Store the combined transform in mat_turntable
-		// mat_turntable = A * B * ...
 		mat4_matmul_many(mat_turntable, look_at) // edit this
 	}
 
 	update_cam_transform()
 
-	// Prevent clicking and dragging from selecting the GUI text.
+	/*---------------------------------------------------------------
+		Actors
+	---------------------------------------------------------------*/
+
+	// FOG
+	const fog_args = {
+		fog_color: [0., 0., 1.],
+		closeFarThreshold: [10., 20.],
+		minMaxIntensity: [0.05, 0.9],
+		useFog: true,
+	}
+
+	// fog_args.useFog = false;
+	
+	// TERRAIN GENERATION
+	let terrain_width = 180
+	let terrain_height = 180
+	let terrain_depth = 96
+
+	let seed = 0
+	let textures = []
+	let fbm = 2 // <1 -> Perlin, >1 -> FBM
+	for (let i = 0; i < terrain_depth; i++) {
+		let texture = init_noise(regl, resources, fbm)
+		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
+		textures.push(tex)
+	}
+	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
+	let terrain_actor = ter.terrain
+	let algae = ter.algae
+
+	// const a = init_algae(regl, resources, [0, 0, 0])
+
+	// PROCEDURAL TEXTURES
+	const texture_cel = init_ptextures(regl, resources)
+
+	const texture_buffer = texture_cel.get_buffer()
+
+	const water_texture = regl.texture({})
+
+	// POSTERIZATION
+	const posterize = regl({
+		attributes: {
+			position: [ -4, -4, 4, -4, 0, 4 ],
+		},
+		vert: resources['shaders/posterization.vert.glsl'],
+		frag: resources['shaders/posterization.frag.glsl'],
+		uniforms: {
+			texture: regl.prop('source'),
+		},
+		depth: { enable : false },
+		count: 3,
+	})
+
+	/*---------------------------------------------------------------
+		Main FrameBuffer
+	---------------------------------------------------------------*/
+	// The proper size for the following buffer will be given by the frame render
+	const fbo = regl.framebuffer({
+		color: regl.texture({
+			width: 1,
+			height: 1,
+			wrap: 'clamp'
+ 		}),
+  		depth: true,
+	})
+
+	// Draw the buffer to the screen
+	const draw_fbo_to_screen = regl({
+		attributes: {
+			position: [ -4, -4, 4, -4, 0, 4 ],
+		},
+		vert: resources['shaders/buffer_to_screen.vert.glsl'],
+		frag: resources['shaders/buffer_to_screen.frag.glsl'],
+		uniforms: {
+			buffer_to_draw: fbo,
+		},
+		depth: { enable : false },
+		count: 3,
+	})
+
+	/*---------------------------------------------------------------
+		Listeners
+	---------------------------------------------------------------*/
 	canvas_elem.addEventListener('mousedown', (event) => { event.preventDefault() })
 
 	// Rotate camera position by dragging with the mouse
@@ -182,66 +216,23 @@ async function main() {
 			update_cam_transform()
 			update_needed = true
 		}
+	})
 
+	window.addEventListener('wheel', (event) => {
+		// scroll wheel to zoom in or out
+		const factor_mul_base = 1.08
+		const factor_mul = (event.deltaY > 0) ? factor_mul_base : 1./factor_mul_base
+		cam_distance_factor *= factor_mul
+		cam_distance_factor = Math.max(0.1, Math.min(cam_distance_factor, 4))
+		// console.log('wheel', event.deltaY, event.deltaMode)
+		event.preventDefault() // don't scroll the page too...
+		update_cam_transform()
+		update_needed = true
 	})
 
 	/*---------------------------------------------------------------
-		Actors
-	---------------------------------------------------------------*/
-
-	const fog_args = {
-		fog_color: [0., 0., 1.],
-		closeFarThreshold: [10., 20.],
-		minMaxIntensity: [0.05, 0.9],
-		useFog: true,
-	}
-
-	// fog_args.useFog = false;
-
-	
-	let terrain_width = 180
-	let terrain_height = 180
-	let terrain_depth = 96
-
-	let seed = 0
-	let textures = []
-	let fbm = 2 // <1 -> Perlin, >1 -> FBM
-	for (let i = 0; i < terrain_depth; i++) {
-		let texture = init_noise(regl, resources, fbm)
-		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
-		textures.push(tex)
-	}
-	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
-	let terrain_actor = ter.terrain
-	let algae = ter.algae
-	
-
-	// const a = init_algae(regl, resources, [0, 0, 0])
-	
-	// PROCEDURAL TEXTURES
-	const texture_cel = init_ptextures(regl, resources)
-
-	const texture_buffer = texture_cel.get_buffer()
-
-	const water_texture = regl.texture({})
-
-	// POSTERIZATION
-	const posterize = regl({
-		attributes: {
-			position: [ -4, -4, 4, -4, 0, 4 ],
-		},
-		vert: resources['shaders/posterization.vert.glsl'],
-		frag: resources['shaders/posterization.frag.glsl'],
-		uniforms: {
-			texture: regl.prop('source'),
-		},
-		depth: { enable : false },
-		count: 3,
-	})
-
-	/*
 		UI
-	*/
+	---------------------------------------------------------------*/
 	register_keyboard_action('z', () => {
 		debug_overlay.classList.toggle('hide')
 	})
@@ -409,34 +400,6 @@ async function main() {
 	})
 
 	/*---------------------------------------------------------------
-		Main FrameBuffer
-	---------------------------------------------------------------*/
-	// The proper size for the following buffer will be given by the frame render
-	const fbo = regl.framebuffer({
-		color: regl.texture({
-			width: 1,
-			height: 1,
-			wrap: 'clamp'
- 		}),
-  		depth: true,
-	})
-
-	// Draw the buffer to the screen
-	const draw_fbo_to_screen = regl({
-		attributes: {
-			position: [ -4, -4, 4, -4, 0, 4 ],
-		},
-		vert: resources['shaders/buffer_to_screen.vert.glsl'],
-		frag: resources['shaders/buffer_to_screen.frag.glsl'],
-		uniforms: {
-			buffer_to_draw: fbo,
-		},
-		depth: { enable : false },
-		count: 3,
-	})
-
-
-	/*---------------------------------------------------------------
 		Frame render
 	---------------------------------------------------------------*/
 	const mat_projection = mat4.create()
@@ -464,6 +427,14 @@ async function main() {
 				100, // far
 			)
 			const time = 0.005 * (frame.tick % 200)
+			/*
+			const {bezier_view, camera_position} = bezier_curve(
+				...PRESET_PATHS[0],
+				time,
+				[90, 90, 36],
+				lookAtTarget
+			)
+			*/
 			const {bezier_view, camera_position} = long_bezier_curve(
 				PRESET_PATHS[0],
 				time,
@@ -473,39 +444,35 @@ async function main() {
 			mat4.copy(mat_view, bezier_view)
 			vec3.copy(cam_pos, camera_position)
 			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
-		} else if(update_needed) {
+		} else if (update_needed) {
 			update_needed = false // do this *before* running the drawing code so we don't keep updating if drawing throws an error.
-
 			mat4.perspective(mat_projection,
 				deg_to_rad * 60, // fov y
 				frame.framebufferWidth / frame.framebufferHeight, // aspect ratio
 				0.01, // near
-				300, // far
+				100, // far
 			)
-
 			mat4.copy(mat_view, mat_turntable)
-
 			// Calculate light position in camera frame
-			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
 			vec3.copy(cam_pos, campos)
-			
-			//a.draw(scene_info, fog_args, cam_pos)
+			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
 		}
+
 		// Draw cellular texture to buffer
 		texture_cel.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5, time : frame.tick * 0.02})
 		// Update texture 'object'
 		water_texture({
 			width: texture_buffer.width,
 			height: texture_buffer.height,
-			data: regl.read({framebuffer: texture_buffer})
+			data: regl.read({framebuffer: texture_buffer}),
 		})
+
 		const scene_info = {
 			mat_view:        mat_view,
 			mat_projection:  mat_projection,
 			light_position_cam: light_position_cam,
 			water_texture: water_texture,
 		}
-		// Clear the whole image
 		regl({
 			framebuffer: fbo,
 		}) (() => {
