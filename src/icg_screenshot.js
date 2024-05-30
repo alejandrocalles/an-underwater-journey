@@ -1,3 +1,4 @@
+"use strict";
 
 export function framebuffer_to_image_download(regl, buffer, name) {
 	const image_array = regl.read({
@@ -47,4 +48,103 @@ export function framebuffer_to_image_download(regl, buffer, name) {
 		a.href = window.URL.createObjectURL(img_data_encoded);
 		a.click();
 	});
+}
+
+
+
+/*
+Recording video from a <canvas> using MediaRecorder
+	https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
+
+	https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream
+*/
+export class CanvasVideoRecording {
+
+	constructor({canvas, videoBitsPerSecond} = {videoBitsPerSecond: 10*1024*1024}) {
+		/*
+		https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream
+		frameRate: 
+			If not set, a new frame will be captured each time the canvas changes; 
+			if set to 0, frames will not be captured automatically; 
+			instead, they will only be captured when the returned track's requestFrame() method is called.
+		*/
+
+		const video_format = "video/webm";
+
+		this.num_frames = 0;
+		this.video_data_fragments = [];
+
+		this.stream = canvas.captureStream(0);
+
+		this.recorder = new MediaRecorder(this.stream, {
+			mimeType: video_format,
+			videoBitsPerSecond: videoBitsPerSecond,
+		});
+
+		this.recorder.ondataavailable = (e) => {
+			this.video_data_fragments.push(e.data);
+		}
+
+		this.recorder.onerror = (e) => {
+			console.warn('Recording error', e);
+		}
+		
+		this.recorder.onstop = (e) => {
+			this.finish_recording();
+		}
+	}
+
+	start() {
+		this.num_frames = 0;
+		this.video_data_fragments.splice();
+		this.recorder.start();
+		console.log("recorder started", this.recorder.state);
+	}
+
+	push_frame() {
+		if(this.is_recording()) {
+			this.stream.requestFrame();
+			this.num_frames += 1;
+		}
+	}
+
+	is_recording() {
+		return this.recorder.state === 'recording';
+	}
+
+	stop() {
+		this.recorder.requestData();
+		this.recorder.stop();
+	}
+
+	compose_video() {
+		const fragments = this.video_data_fragments;
+		const video_data_blob = new Blob(fragments, { type: fragments[0].type });
+		fragments.splice();
+
+		const video_data_url = URL.createObjectURL(video_data_blob);
+
+		console.log('Video completed, size =', video_data_blob.length)
+
+		//console.log('Video blob=', blob, 'url = ', video_file_urlencoded, 'len', video_file_urlencoded.length);
+
+		this.video_data_blob = video_data_blob;
+		this.video_data_url = video_data_url;
+	}
+
+	finish_recording() {
+		this.compose_video();
+		this.create_video_ui();
+	}
+
+	create_video_ui() {
+		const elem_box = document.getElementById('video-container') || document.getElementById('debug-overlay');
+
+		const elem_video = document.createElement('video');
+		elem_box.appendChild(elem_video);
+
+		elem_video.src = this.video_data_url;
+		elem_video.width = 320;
+		elem_video.controls = true;
+	}
 }
