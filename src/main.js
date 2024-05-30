@@ -195,16 +195,20 @@ async function main() {
 		minMaxIntensity: [0.05, 0.9],
 		useFog: true,
 	}
-
-	fog_args.useFog = false;
+	
+	let fish_fog_intensity_factor = 0.7
+	const fish_fog = {
+		fog_color: fog_args.fog_color,
+		closeFarThreshold: fog_args.closeFarThreshold,
+		minMaxIntensity: vec2.scale([], fog_args.minMaxIntensity, fish_fog_intensity_factor),
+		useFog: fog_args.useFog,
+	}
 
 	
 	let terrain_width = 180
 	let terrain_height = 180
 	let terrain_depth = 96
 
-	
-	let seed = 0
 	let textures = []
 	let fbm = 2 // <1 -> Perlin, >1 -> FBM
 	for (let i = 0; i < terrain_depth; i++) {
@@ -241,6 +245,7 @@ async function main() {
 		y: [93, 141],
 		z: [72, 89]
 	}
+	num_boids = 30
 	let boid2 = await initialize_boids(regl, resources, num_boids, box2, size, max_speed);
 	let boid_actors2 = boid2.boids
 	let boids_list2 = boid2.boids_list
@@ -250,6 +255,7 @@ async function main() {
 		y: [55, 128],
 		z: [11, 21]
 	}
+	num_boids = 250
 	let boid3 = await initialize_boids(regl, resources, num_boids, box3, size, max_speed);
 	let boid_actors3 = boid3.boids
 	let boids_list3 = boid3.boids_list
@@ -288,6 +294,7 @@ async function main() {
 
 	register_keyboard_action('f', () => { 
 		fog_args.useFog = !fog_args.useFog; 
+		fish_fog.useFog = !fish_fog.useFog;
 		update_needed = true; 
 	})
 
@@ -377,14 +384,17 @@ async function main() {
 		update_needed = true
 		if (close > far && closeChanged) {
 			fog_args.closeFarThreshold = [close, close]
+			fish_fog.closeFarThreshold = [close, close]
 			return [close, close, true]
 		}
 		else if (far < close && !closeChanged) {
 			fog_args.closeFarThreshold = [far, far]
+			fish_fog.closeFarThreshold = [far, far]
 			return [far, far, true]
 		}
 		else {
 			fog_args.closeFarThreshold = [close, far]
+			fish_fog.closeFarThreshold = [close, far]
 			return [close, far, false]
 		}
 	}
@@ -394,14 +404,17 @@ async function main() {
 		let ret;
 		if (min > max && minChanged) {
 			fog_args.minMaxIntensity = [min, min]
+			fish_fog.minMaxIntensity = [min * fish_fog_intensity_factor, min * fish_fog_intensity_factor]
 			return [min, min, true]
 		}
 		else if (max < min && !minChanged) {
 			fog_args.minMaxIntensity = [max, max]
+			fish_fog.minMaxIntensity = [max * fish_fog_intensity_factor, max * fish_fog_intensity_factor]
 			return [max, max, true]
 		}
 		else {
 			fog_args.minMaxIntensity = [min, max]
+			fish_fog.minMaxIntensity = [min * fish_fog_intensity_factor, max * fish_fog_intensity_factor]
 			return [min, max, false]
 		}
 	}
@@ -409,50 +422,12 @@ async function main() {
 	function change_fog_color(color) {
 		let rgb = hexToRgb(color)
 		fog_args.fog_color = [rgb.r, rgb.g, rgb.b]
+		fish_fog.fog_color = fog_args.fog_color
 	}
 
 	register_slider_with_dependency('slider-fog-close', 'slider-fog-far', change_fog_distance)
 	register_slider_with_dependency('slider-fog-min', 'slider-fog-max', change_fog_intensity)
 	register_color('color-fog', change_fog_color)
-
-	// const draw_boid = regl({
-	// 	// Vertex attributes
-	// 	attributes: {
-	// 		// 3 vertices with 2 coordinates each
-	// 		position: regl.prop('position'),
-	// 	},
-	// 	// Triangles (faces), as triplets of vertex indices
-	// 	elements: [
-	// 		[0, 1, 2],
-	// 	],
-
-	// 	vert: /*glsl*/`
-	// 	// Vertex attributes, specified in the "attributes" entry of the pipeline
-	// 	attribute vec2 position;
-				
-	// 	// Global variables specified in "uniforms" entry of the pipeline
-	// 	uniform mat4 mat_transform;
-
-	// 	void main() {
-	// 		// #TODO GL1.1.2.1 Edit the vertex shader to apply mat_transform to the vertex position.
-	// 		gl_Position = mat_transform * vec4(position, 0, 1);
-	// 	}`,
-		
-	// 	frag: /*glsl*/`
-	// 	precision mediump float;
-		
-	// 	uniform vec3 color;
-
-	// 	void main() {
-	// 		gl_FragColor = vec4(color, 1.); // output: RGBA in 0..1 range
-	// 	}`,
-
-	// 	// Uniforms: global data available to the shader
-	// 	uniforms: {
-	// 		mat_transform: regl.prop('mat_transform'),
-	// 		color: regl.prop('color'),
-	// 	},	
-	// })
 
 
 	/*---------------------------------------------------------------
@@ -463,7 +438,6 @@ async function main() {
 	const cam_pos = vec3.create()
 
 	let light_position_world = [10, -10, -200, 1.0]
-	//let light_position_world = [1, -1, 1., 1.0]
 
 	const light_position_cam = [0, 0, 0, 0]
 
@@ -497,17 +471,17 @@ async function main() {
 
 			boids_list1 = boids_update(boids_list1, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
 			for (let i = 0; i < boids_list1.length; i++) {
-				boid_actors1[i].draw(scene_info, fog_args, cam_pos)
+				boid_actors1[i].draw(scene_info, fish_fog, cam_pos)
 			}
 
 			boids_list2 = boids_update(boids_list2, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
 			for (let i = 0; i < boids_list2.length; i++) {
-				boid_actors2[i].draw(scene_info, fog_args, cam_pos)
+				boid_actors2[i].draw(scene_info, fish_fog, cam_pos)
 			}
 
 			boids_list3 = boids_update(boids_list3, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
 			for (let i = 0; i < boids_list3.length; i++) {
-				boid_actors3[i].draw(scene_info, fog_args, cam_pos)
+				boid_actors3[i].draw(scene_info, fish_fog, cam_pos)
 			}
 			
 			

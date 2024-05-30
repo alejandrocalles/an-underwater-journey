@@ -1,5 +1,6 @@
 import {load_text} from "./icg_web.js"
 import {Mesh} from "../lib/webgl-obj-loader_2.0.8/webgl-obj-loader.module.js"
+import { vec3 } from "../lib/gl-matrix_3.3.0/esm/index.js";
 
 /*
 	Mesh construction and loading
@@ -139,7 +140,7 @@ export async function icg_mesh_load_obj(regl_instance, url, material_colors_by_n
 }
 
 // understood the .obj file format thanks to https://all3dp.com/2/obj-file-format-simply-explained/
-export async function load_mesh(path){
+export async function load_mesh(path, scale = 1.0){
 	let mesh = {
 		vertices: [],
 		normals: [],
@@ -150,24 +151,35 @@ export async function load_mesh(path){
 
 	const lines = response.split('\n')
 	const vertices = []
+	const tmp_normals = []
 	const normals = []
 	const faces = []
 	for (const line of lines){
 		const parts = line.split(' ')
 		if (parts[0] === 'v'){
-			vertices.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])])
+			let v = [parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])]
+			vertices.push(vec3.scale([], v, scale))
+			normals.push([])
 		}
-		if (parts[0] === 'vn'){
-			normals.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])])
+		else if (parts[0] === 'vn'){
+			tmp_normals.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])])
 		}
-		if (parts[0] === 'f'){
+		else if (parts[0] === 'f'){
 			const face = []
 			for (let i = 1; i < parts.length; i++){
 				const vertex = parts[i].split('/')
-				face.push(parseInt(vertex[0]) - 1)
-				
+				let v_index = parseInt(vertex[0]) - 1
+				face.push(v_index)
+				if (normals[v_index].length === 0){
+					normals[v_index] = tmp_normals[parseInt(vertex[2]) - 1]
+				} else {
+					vec3.add(normals[v_index], normals[v_index], tmp_normals[parseInt(vertex[2]) - 1])
+				}
 			}
 			faces.push(face)
+		}
+		for (let i = 0; i < normals.length; i++){
+			vec3.normalize(normals[i], normals[i])
 		}
 	}
 

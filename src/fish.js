@@ -83,60 +83,8 @@ export async function initialize_boids(regl, resources, num_boids, box, scale, m
 
     let fish_mesh1 = {vertices: [], normals: [], faces: []}
     let fish_mesh2 = {vertices: [], normals: [], faces: []}
-    let loaded_fish_mesh1 = await icg_mesh_load_obj_cpu("src/meshes/fish1.obj")
-    let loaded_fish_mesh2 = await icg_mesh_load_obj_cpu("src/meshes/fish2.obj")
-    // convert and scale fish mesh 1 to correct format
-    for (let i = 0; i < loaded_fish_mesh1.vertices.length / 3; i++) {
-        let vert = [
-            loaded_fish_mesh1.vertices[i*3],
-            loaded_fish_mesh1.vertices[i*3 + 1],
-            loaded_fish_mesh1.vertices[i*3 + 2]
-        ]
-        fish_mesh1.vertices.push(vec3.scale([], vert, scale))
-    }
-    for (let i = 0; i < loaded_fish_mesh1.normals.length / 3; i++) {
-        let norm = [
-            loaded_fish_mesh1.normals[i*3],
-            loaded_fish_mesh1.normals[i*3 + 1],
-            loaded_fish_mesh1.normals[i*3 + 2]
-        ]
-        fish_mesh1.normals.push(norm)
-    }
-    for (let i = 0; i < loaded_fish_mesh1.faces.length / 3; i++) {
-        let face = [
-            loaded_fish_mesh1.faces[i*3],
-            loaded_fish_mesh1.faces[i*3 + 1],
-            loaded_fish_mesh1.faces[i*3 + 2]
-        ]
-        fish_mesh1.faces.push(face)
-    }
-    console.log(fish_mesh1)
-    
-    // convert and scale fish mesh 2 to correct format
-    for (let i = 0; i < loaded_fish_mesh2.vertices.length / 3; i++) {
-        let vert = [
-            loaded_fish_mesh2.vertices[i*3],
-            loaded_fish_mesh2.vertices[i*3 + 1],
-            loaded_fish_mesh2.vertices[i*3 + 2]
-        ]
-        fish_mesh2.vertices.push(vec3.scale([], vert, scale))
-    }
-    for (let i = 0; i < loaded_fish_mesh2.normals.length / 3; i++) {
-        let norm = [
-            loaded_fish_mesh2.normals[i*3],
-            loaded_fish_mesh2.normals[i*3 + 1],
-            loaded_fish_mesh2.normals[i*3 + 2]
-        ]
-        fish_mesh2.normals.push(norm)
-    }
-    for (let i = 0; i < loaded_fish_mesh2.faces.length / 3; i++) {
-        let face = [
-            loaded_fish_mesh2.faces[i*3],
-            loaded_fish_mesh2.faces[i*3 + 1],
-            loaded_fish_mesh2.faces[i*3 + 2]
-        ]
-        fish_mesh2.faces.push(face)
-    }
+    fish_mesh1 = await load_mesh("src/meshes/fish1.obj", scale)
+    fish_mesh2 = await load_mesh("src/meshes/fish2.obj", scale)
 
     let boids_list = []
     let boids_actors = []
