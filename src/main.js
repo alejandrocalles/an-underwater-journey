@@ -225,8 +225,8 @@ async function main() {
 	let centre_pull_threshold = 5;
 	let avoidance_distance = 5;
 	let avoidance_factor = 0.000003;
-	let influence_distance = 11;
-	let swarming_tendency = 0.05;
+	let influence_distance = 13;
+	let swarming_tendency = 0.06;
 	let flocking_tendency = 0.09;
 	let max_speed = 0.16
 	let size = [0.3, 0.5, 0.3]
@@ -251,9 +251,9 @@ async function main() {
 	let boids_list2 = boid2.boids_list
 
 	let box3 = {
-		x: [15, 34],
-		y: [55, 128],
-		z: [11, 21]
+		x: [12, 39],
+		y: [85, 130],
+		z: [11, 27]
 	}
 	num_boids = 150
 	let boid3 = await initialize_boids(regl, resources, num_boids, box3, size, max_speed);
