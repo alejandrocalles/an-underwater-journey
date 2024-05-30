@@ -1,16 +1,15 @@
 precision highp float;
 
 uniform sampler2D texture;
+uniform float levels;
 varying vec2 uv;
-
-#define LEVELS 10.
 
 void main() {
     vec3 color          = texture2D(texture, uv).xyz;
     float greyscale     = max(color.r, max(color.g, color.b));
-    float lower         = floor(greyscale * LEVELS) / LEVELS;
+    float lower         = floor(greyscale * levels) / levels;
     float lowerDiff     = abs(greyscale - lower);
-    float upper         = ceil(greyscale * LEVELS) / LEVELS;
+    float upper         = ceil(greyscale * levels) / levels;
     float upperDiff     = abs(upper - greyscale);
     float level         = lowerDiff <= upperDiff ? lower : upper;
     float adjustment    = level / greyscale;

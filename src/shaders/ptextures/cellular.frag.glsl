@@ -20,7 +20,7 @@ vec2 random2d(vec2 p) {
 }
 #define N_CENTERS 4
 #define CELLULAR_CENTER_RADIUS 0.005
-#define SCALE 50.0
+#define SCALE 40.0
 #define LIGHT_LEVEL 0.7
 #define TEXTURE_LIGHT vec3(0.0, 1.1, 1.2)
 

@@ -234,6 +234,7 @@ async function main() {
 		frag: resources['shaders/posterization.frag.glsl'],
 		uniforms: {
 			texture: regl.prop('source'),
+			levels: regl.prop('levels'),
 		},
 		depth: { enable : false },
 		count: 3,
@@ -517,7 +518,10 @@ async function main() {
 		})
 
 		if (posterize_scene) {
-			posterize({source: fbo})
+			posterize({
+				source: fbo,
+				levels: +document.querySelector('#posterization-levels').value,
+			})
 		} else {
 			draw_fbo_to_screen()
 		}
