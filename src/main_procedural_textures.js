@@ -143,11 +143,7 @@ async function main() {
 
 	const texture_buffer = texture_cel.get_buffer()
 
-	const water_texture = regl.texture({
-		width: texture_buffer.width,
-		height: texture_buffer.height,
-		data: regl.read({framebuffer: texture_buffer}),
-	})
+	const water_texture = regl.texture({})
 
 	// POSTERIZATION
 	const posterize = regl({
@@ -220,7 +216,6 @@ async function main() {
 			update_cam_transform()
 			update_needed = true
 		}
-
 	})
 
 	window.addEventListener('wheel', (event) => {
@@ -412,7 +407,6 @@ async function main() {
 	const cam_pos = vec3.create()
 
 	let light_position_world = [10, -10, -200, 1.0]
-	//let light_position_world = [1, -1, 1., 1.0]
 
 	const light_position_cam = [0, 0, 0, 0]
 
@@ -470,14 +464,14 @@ async function main() {
 		water_texture({
 			width: texture_buffer.width,
 			height: texture_buffer.height,
-			data: regl.read({framebuffer: texture_buffer})
+			data: regl.read({framebuffer: texture_buffer}),
 		})
 
 		const scene_info = {
 			mat_view:        mat_view,
 			mat_projection:  mat_projection,
 			light_position_cam: light_position_cam,
-			water_texture: texture_cel.get_buffer(),
+			water_texture: water_texture,
 		}
 		regl({
 			framebuffer: fbo,

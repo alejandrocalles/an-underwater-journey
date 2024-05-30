@@ -40,6 +40,22 @@ function deriv_bezier_deg4(a, b, c, d, time) {
     )
 }
 
+/**
+ * Reflects a point across a center.
+ * @param {number[]} point the point to be reflected.
+ * @param {number[]} center the center of reflection.
+ * @returns The reflected point.
+ */
+export function reflect(point, center) {
+    return vec3.add(vec3.create(), center, vec3.subtract(vec3.create(), center, point));
+}
+
+export function loop(points) {
+    const a = points[-1];
+    const b = reflect(points[-2], points[-1]);
+    const c = reflect(points[1], points[0]);
+}
+
 export function bezier_curve(a, b, c, d, time, target, look_at_target) {
 
     const pos = bezier_deg4(a, b, c, d, time)
@@ -60,8 +76,20 @@ export function bezier_curve(a, b, c, d, time, target, look_at_target) {
 	return { bezier_view: view, camera_position: pos }
 }
 
+/**
+ * Represents a series of concatenated cubic bezier curves.
+ * @param {number[][]} control_points A list of all control points. Must be of length `3n + 1` where
+ * `n` is the number of curves. The first point of each curve (except for the first one) is the
+ * last point of the previous one. To have seamless concatenation of the curves, make sure that for each
+ * point `p` that's common to two curves (i.e. endpoints that are also startpoints), the point immediately after
+ * is the reflection through `p` of the point immediately before. See function [reflect](./bezier.js).
+ * @param {number} time The relative position along the curve. A number between `0` and `1`.
+ * @param {number[]} target A point in space to look at.
+ * @param {boolean} look_at_target If set, the camera will look at the `target`,
+ * otherwise it will follow the curve's gradient projected on the xy plane.
+ * @returns The view matrix and the camera position.
+ */
 export function long_bezier_curve(control_points, time, target, look_at_target) {
-    // Control points must be 3k + 4
     const number_of_curves = Math.floor(control_points.length / 3);
     const scaled_time = time * number_of_curves;
     const curve_index = Math.floor(scaled_time);

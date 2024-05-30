@@ -13,7 +13,16 @@ import { lookAt } from "../lib/gl-matrix_3.3.0/esm/mat4.js"
 import { load_mesh } from "./icg_mesh.js"
 
 import { init_ptextures } from "./ptextures.js"
+import { long_bezier_curve } from "./bezier.js"
 
+const PRESET_PATHS = [
+	[
+		[170, 170, 100],
+		[30, 150, 70],
+		[30, 30, 20],
+		[170, 10, 50],
+	]
+]
 
 async function main() {
 	/* const in JS means the variable will not be bound to a new value, but the value can be modified (if its an object or array)
@@ -209,14 +218,25 @@ async function main() {
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
 	
+	// PROCEDURAL TEXTURES
 	const texture_cel = init_ptextures(regl, resources)
 
 	const texture_buffer = texture_cel.get_buffer()
 
-	const water_texture = regl.texture({
-		width: texture_buffer.width,
-		height: texture_buffer.height,
-		data: regl.read({framebuffer: texture_buffer}),
+	const water_texture = regl.texture({})
+
+	// POSTERIZATION
+	const posterize = regl({
+		attributes: {
+			position: [ -4, -4, 4, -4, 0, 4 ],
+		},
+		vert: resources['shaders/posterization.vert.glsl'],
+		frag: resources['shaders/posterization.frag.glsl'],
+		uniforms: {
+			texture: regl.prop('source'),
+		},
+		depth: { enable : false },
+		count: 3,
 	})
 
 	/*
@@ -373,6 +393,48 @@ async function main() {
 	register_slider_with_dependency('slider-fog-min', 'slider-fog-max', change_fog_intensity)
 	register_color('color-fog', change_fog_color)
 
+	let posterize_scene = false
+	register_keyboard_action('p', () => {
+		posterize_scene = !posterize_scene
+	})
+
+	let automatic_camera = false
+	register_keyboard_action('b', () => {
+		automatic_camera = !automatic_camera
+		update_needed = true
+	})
+	let lookAtTarget = true
+	register_keyboard_action('c', () => {
+		lookAtTarget = !lookAtTarget
+	})
+
+	/*---------------------------------------------------------------
+		Main FrameBuffer
+	---------------------------------------------------------------*/
+	// The proper size for the following buffer will be given by the frame render
+	const fbo = regl.framebuffer({
+		color: regl.texture({
+			width: 1,
+			height: 1,
+			wrap: 'clamp'
+ 		}),
+  		depth: true,
+	})
+
+	// Draw the buffer to the screen
+	const draw_fbo_to_screen = regl({
+		attributes: {
+			position: [ -4, -4, 4, -4, 0, 4 ],
+		},
+		vert: resources['shaders/buffer_to_screen.vert.glsl'],
+		frag: resources['shaders/buffer_to_screen.frag.glsl'],
+		uniforms: {
+			buffer_to_draw: fbo,
+		},
+		depth: { enable : false },
+		count: 3,
+	})
+
 
 	/*---------------------------------------------------------------
 		Frame render
@@ -382,12 +444,36 @@ async function main() {
 	const cam_pos = vec3.create()
 
 	let light_position_world = [10, -10, -200, 1.0]
-	//let light_position_world = [1, -1, 1., 1.0]
 
 	const light_position_cam = [0, 0, 0, 0]
 
 	regl.frame((frame) => {
-		if(update_needed) {
+		/*
+			Resize and clear framebuffer
+
+			IMPORTANT: Buffer must be cleared before resizing, otherwise 
+			regl will think it's still being used and will crash the process
+		*/
+		regl.clear({color: [0.0, 0.0, 0.0, 1.0], depth: 1, framebuffer: fbo})
+		fbo.resize(frame.framebufferWidth, frame.framebufferHeight)
+		if (automatic_camera) {
+			mat4.perspective(mat_projection,
+				deg_to_rad * 60, // fov y
+				frame.framebufferWidth / frame.framebufferHeight, // aspect ratio
+				0.01, // near
+				100, // far
+			)
+			const time = 0.005 * (frame.tick % 200)
+			const {bezier_view, camera_position} = long_bezier_curve(
+				PRESET_PATHS[0],
+				time,
+				[90, 90, 36],
+				lookAtTarget,
+			)
+			mat4.copy(mat_view, bezier_view)
+			vec3.copy(cam_pos, camera_position)
+			vec4.transformMat4(light_position_cam, light_position_world, mat_view)
+		} else if(update_needed) {
 			update_needed = false // do this *before* running the drawing code so we don't keep updating if drawing throws an error.
 
 			mat4.perspective(mat_projection,
@@ -420,10 +506,20 @@ async function main() {
 			water_texture: water_texture,
 		}
 		// Clear the whole image
-		regl.clear({color: [0.9, 0.9, 1., 1]})
-		terrain_actor.draw(scene_info, fog_args, cam_pos)
-		for (let i = 0; i < algae.length; i++) {
-			algae[i].draw(scene_info, fog_args, cam_pos)
+		regl({
+			framebuffer: fbo,
+		}) (() => {
+			regl.clear({color: [0.8, 0.8, 1., 1]})
+			terrain_actor.draw(scene_info, fog_args, cam_pos)
+			for (let i = 0; i < algae.length; i++) {
+				algae[i].draw(scene_info, fog_args, cam_pos)
+			}
+		})
+
+		if (posterize_scene) {
+			posterize({source: fbo})
+		} else {
+			draw_fbo_to_screen()
 		}
 
 // 		debug_text.textContent = `

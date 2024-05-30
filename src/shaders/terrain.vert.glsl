@@ -19,7 +19,7 @@ uniform vec4 light_position; //in camera space coordinates already
 void main()
 {
     v2f_height = position.z;
-	uv = (position / 180.0).xy;
+	uv = position.xy / 180.0; 
     vec4 position_v4 = vec4(position, 1);
 
     /** #TODO PG1.6.1:
