@@ -203,27 +203,27 @@ async function main() {
 	let terrain_height = 180
 	let terrain_depth = 96
 
-	/*
-	let seed = 0
-	let textures = []
-	let fbm = 2 // <1 -> Perlin, >1 -> FBM
-	for (let i = 0; i < terrain_depth; i++) {
-		let texture = init_noise(regl, resources, fbm)
-		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
-		textures.push(tex)
-	}
-	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
-	let terrain_actor = ter.terrain
-	let algae = ter.algae*/
+	
+	// let seed = 0
+	// let textures = []
+	// let fbm = 2 // <1 -> Perlin, >1 -> FBM
+	// for (let i = 0; i < terrain_depth; i++) {
+	// 	let texture = init_noise(regl, resources, fbm)
+	// 	let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
+	// 	textures.push(tex)
+	// }
+	// let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
+	// let terrain_actor = ter.terrain
+	// let algae = ter.algae
 
 
 	let num_boids = 100;
 	let centre_pull_threshold = 5;
-	let avoidance_distance = 8;
-	let avoidance_factor = 0.005;
-	let influence_distance = 10;
-	let swarming_tendency = 0.1;
-	let flocking_tendency = 0.2;
+	let avoidance_distance = 3.5;
+	let avoidance_factor = 2;
+	let influence_distance = 40;
+	let swarming_tendency = 1.4;
+	let flocking_tendency = 0.4;
 	let boid = await initialize_boids(regl, resources, num_boids);
 	let boid_actors = boid.boids
 	let boids_list = boid.boids_list
@@ -390,44 +390,6 @@ async function main() {
 	register_slider_with_dependency('slider-fog-min', 'slider-fog-max', change_fog_intensity)
 	register_color('color-fog', change_fog_color)
 
-	// const draw_boid = regl({
-	// 	// Vertex attributes
-	// 	attributes: {
-	// 		// 3 vertices with 2 coordinates each
-	// 		position: regl.prop('position'),
-	// 	},
-	// 	// Triangles (faces), as triplets of vertex indices
-	// 	elements: [
-	// 		[0, 1, 2],
-	// 	],
-
-	// 	vert: /*glsl*/`
-	// 	// Vertex attributes, specified in the "attributes" entry of the pipeline
-	// 	attribute vec2 position;
-				
-	// 	// Global variables specified in "uniforms" entry of the pipeline
-	// 	uniform mat4 mat_transform;
-
-	// 	void main() {
-	// 		// #TODO GL1.1.2.1 Edit the vertex shader to apply mat_transform to the vertex position.
-	// 		gl_Position = mat_transform * vec4(position, 0, 1);
-	// 	}`,
-		
-	// 	frag: /*glsl*/`
-	// 	precision mediump float;
-		
-	// 	uniform vec3 color;
-
-	// 	void main() {
-	// 		gl_FragColor = vec4(color, 1.); // output: RGBA in 0..1 range
-	// 	}`,
-
-	// 	// Uniforms: global data available to the shader
-	// 	uniforms: {
-	// 		mat_transform: regl.prop('mat_transform'),
-	// 		color: regl.prop('color'),
-	// 	},	
-	// })
 
 
 	/*---------------------------------------------------------------
@@ -476,10 +438,10 @@ async function main() {
 			}
 			
 			
-			/*terrain_actor.draw(scene_info, fog_args, cam_pos)
-			for (let i = 0; i < algae.length; i++) {
-				algae[i].draw(scene_info, fog_args, cam_pos)
-			}*/
+			// terrain_actor.draw(scene_info, fog_args, cam_pos)
+			// for (let i = 0; i < algae.length; i++) {
+			// 	algae[i].draw(scene_info, fog_args, cam_pos)
+			// }
 			//a.draw(scene_info, fog_args, cam_pos)
 
 			if (dir) {

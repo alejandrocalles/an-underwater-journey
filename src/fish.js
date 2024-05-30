@@ -4,36 +4,43 @@ import {mat4_matmul_many} from "./icg_math.js"
 import { load_mesh } from "./icg_mesh.js";
 import {biased_random} from "./l-system.js"
 
- export function boids_update(boids_list, centre_pull_threshold, repel_distance, repel_factor, influence_distance, swarming_tendency, flocking_tendency) {
+ export function boids_update(boids_list, centre_pull_threshold, repel_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency) {
     for (let boid of boids_list) {
         let cengrav = [0, 0, 0];
-        let oriensum = 0;
+        let group_velocity = [0, 0, 0]
         let boid_num = 0;
         for (let other_boid of boids_list) {
             if (other_boid == boid) continue;
             if (vec3.distance(boid.position, other_boid.position) < repel_distance) {
                 let repel_vec = vec3.sub([], boid.position, other_boid.position);
-                boid.repel(repel_vec, repel_factor)
+                boid.repel(repel_vec, avoidance_factor)
             }
 
             if (vec3.distance(boid.position, other_boid.position) < influence_distance) {
                 let diff_vec = [other_boid.position[0] - boid.position[0], other_boid.position[1] - boid.position[1]];
                 if (vec3.dot(boid.velocity, diff_vec) < 0) continue;
                 cengrav = vec3.add([], cengrav, other_boid.position);
+                group_velocity = vec3.add([], group_velocity, other_boid.velocity);
                 boid_num++;
             }
         }
         if (boid_num > 0) {
             cengrav = [cengrav[0] / boid_num, cengrav[1] / boid_num, cengrav[2] / boid_num];
             let cengravdir = vec3.sub([], cengrav, boid.position);
-            vec3.subtract(cengravdir, boid.position, cengrav);
+            // vec3.subtract(cengravdir, boid.position, cengrav);
             vec3.normalize(cengravdir, cengravdir);
             vec3.scale(cengravdir, cengravdir, swarming_tendency);
             boid.applyForce(cengravdir);
+
+            vec3.normalize(group_velocity, group_velocity)
+            vec3.scale(group_velocity, group_velocity, flocking_tendency)
+            boid.applyForce(group_velocity)
+            
             
         }
         if (vec3.distance(boid.position, [0, 0]) > centre_pull_threshold) {
             // boid.applyCorrection(boid.position, boid.velocity, 0.04)
+            
         }
         boid.update()
     }
@@ -78,6 +85,7 @@ export async function initialize_boids(regl, resources, num_boids) {
 
     let fish_mesh1 = await load_mesh("src/meshes/fish1.obj")
     let fish_mesh2 = await load_mesh("src/meshes/fish2.obj")
+    let fish_mesh3 = await load_mesh("src/meshes/fish3.obj")
 
     let boids_list = []
     let boids_actors = []
@@ -85,12 +93,6 @@ export async function initialize_boids(regl, resources, num_boids) {
         let centre_x = Math.random()*2 - 1;
         let centre_y = Math.random()*2 - 1;
         let centre_z = Math.random()*2 - 1;
-        // let centre_x = -0.8;
-        // let centre_y = 0.8;
-        let speed = Math.random() / 500 + 0.008;
-        let x_y_angle = Math.random();
-        let z_angle = Math.random();
-        // let x_y_angle = 0.2
         
         let position = [centre_x, centre_y, centre_z];
         vec3.scale(position, position, 50);
@@ -101,9 +103,9 @@ export async function initialize_boids(regl, resources, num_boids) {
             [-1.5, -0.75, -0.75],
             [-1.5, -0.75, 0.75]
         ];
-        let velocity = [Math.random() + 0.01, Math.random() + 0.01, Math.random() + 0.01]
+        let velocity = [Math.random()/2.5 + 0.01, Math.random()/2.5 + 0.01, Math.random()/2.5 + 0.01]
         let acceleration = [0,0,0];
-        let maxSpeed = (Math.random() + 1) / 10;
+        let maxSpeed = (0.4);
         let maxForce = 3;
 
         let colour = [Math.random(), Math.random(), Math.random()];
@@ -111,7 +113,7 @@ export async function initialize_boids(regl, resources, num_boids) {
         if (biased_random(0, 4, 3) < 1.5) fish_mesh = fish_mesh2
         else fish_mesh = fish_mesh1
         // vec3.random(colour, 1);
-        boids_list.push(new Boid(shape, position, velocity, acceleration, speed, x_y_angle, maxSpeed, maxForce, colour, i, fish_mesh));
+        boids_list.push(new Boid(shape, position, velocity, acceleration, maxSpeed, maxForce, colour, i, fish_mesh3));
         boids_actors.push(new BoidActor(boids_list[i]))
     }
 
@@ -151,12 +153,10 @@ export async function initialize_boids(regl, resources, num_boids) {
 
 
 export class Boid {
-    constructor(shape, position, velocity, acceleration, speed, orientation, maxSpeed, maxForce, colour, id, mesh) {
+    constructor(shape, position, velocity, acceleration, maxSpeed, maxForce, colour, id, mesh) {
         this.position = position;        	// vec3 or vec2
         this.velocity = velocity;        	// vec3 or vec2
         this.acceleration = acceleration;	// vec3 or vec2
-        this.speed = speed;					// float
-        this.orientation = orientation;		// float
         this.maxSpeed = maxSpeed;           // float
         this.maxForce = maxForce;           // float
         this.perceptionRadius = 50;         // float (default value)
@@ -170,6 +170,8 @@ export class Boid {
         this.shape = mesh.vertices
         this.faces = mesh.faces
         this.normal = mesh.normals
+
+        // console.log(this.normal)
 
         this.id = id
     }
@@ -234,9 +236,9 @@ export class Boid {
         this.acceleration = vec3.add([], this.acceleration, force)
     }
 
-    repel(repel_vector, repel_factor) {
+    repel(repel_vector, avoidance_factor) {
         vec3.normalize(repel_vector, repel_vector);
-        vec3.scale(repel_vector, repel_vector, repel_factor);
+        vec3.scale(repel_vector, repel_vector, avoidance_factor);
         this.applyForce(repel_vector)
     }
 
