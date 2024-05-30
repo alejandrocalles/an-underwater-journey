@@ -77,6 +77,7 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 	const faces = []
 	const algae = []
 
+	// for a more simple cubic terrain generation
 	/*
 	for (let z = offset.z; z < grid_depth_; z++) {
 		for (let y = offset.y; y < grid_height_; y++) {
@@ -176,22 +177,34 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 				gx -= offset.x
 				gy -= offset.y
 				gz -= offset.z
-				let vals = [
-					height_map.get(gx, gy, gz),
-					height_map.get(gx + 1, gy, gz),
-					height_map.get(gx + 1, gy + 1, gz),
-					height_map.get(gx, gy + 1, gz),
-					height_map.get(gx, gy, gz + 1),
-					height_map.get(gx + 1, gy, gz + 1),
-					height_map.get(gx + 1, gy + 1, gz + 1),
-					height_map.get(gx, gy + 1, gz + 1),
-				]
+				let vals = []
+				if (gz != grid_depth_ - 2) {
+					vals = [
+						height_map.get(gx, gy, gz),
+						height_map.get(gx + 1, gy, gz),
+						height_map.get(gx + 1, gy + 1, gz),
+						height_map.get(gx, gy + 1, gz),
+						height_map.get(gx, gy, gz + 1),
+						height_map.get(gx + 1, gy, gz + 1),
+						height_map.get(gx + 1, gy + 1, gz + 1),
+						height_map.get(gx, gy + 1, gz + 1),
+					]
+				// set the top of the world to be flat
+				} else {
+					vals = [
+						height_map.get(gx, gy, gz),
+						height_map.get(gx + 1, gy, gz),
+						height_map.get(gx + 1, gy + 1, gz),
+						height_map.get(gx, gy + 1, gz),
+						1, 1, 1, 1
+					]
+				}
 
 				let cube = {
 					vert: vert,
 					val: vals,
 				}
-				let c = compute_cube(cube)
+				let c = compute_cube(cube, grid_depth_)
 				if (!c.success) continue
 
 				let off = vertices.length
@@ -218,69 +231,6 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 					]
 					faces.push(f)
 				}
-			}
-		}
-	}
-
-	// create the roof of the terrain
-	for (let y = offset.y; y < grid_height_; y++) {
-		for (let x = offset.x; x < grid_width_; x++) {
-			let gd = grid_depth - 1
-
-			let base = vertices.length
-			let val1 = height_map.get(x - offset.x, y - offset.y, gd)
-			let val2 = height_map.get(x - offset.x + 1, y - offset.y, gd)
-			let val3 = height_map.get(x - offset.x, y - offset.y + 1, gd)
-			let val4 = height_map.get(x - offset.x + 1, y - offset.y + 1, gd)
-
-			if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5 && val4 < 0.5) {
-				vertices.push([x, y, gd])
-				vertices.push([x + 1, y, gd])
-				vertices.push([x, y + 1, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-				faces.push([base + 2, base + 3, base + 1])
-			}
-
-			else if (val1 < 0.5 && val2 < 0.5 && val3 < 0.5){
-				vertices.push([x, y, gd])
-				vertices.push([x + 1, y, gd])
-				vertices.push([x, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-			}
-			else if (val1 < 0.5 && val2 < 0.5 && val4 < 0.5){
-				vertices.push([x, y, gd])
-				vertices.push([x + 1, y, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-			}
-			else if (val1 < 0.5 && val3 < 0.5 && val4 < 0.5){
-				vertices.push([x, y, gd])
-				vertices.push([x, y + 1, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
-			}
-			else if (val2 < 0.5 && val3 < 0.5 && val4 < 0.5){
-				vertices.push([x + 1, y, gd])
-				vertices.push([x, y + 1, gd])
-				vertices.push([x + 1, y + 1, gd])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				normals.push([0, 0, -1])
-				faces.push([base, base + 1, base + 2])
 			}
 		}
 	}

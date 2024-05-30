@@ -251,9 +251,9 @@ async function main() {
 	let boids_list2 = boid2.boids_list
 
 	let box3 = {
-		x: [15, 34],
-		y: [55, 128],
-		z: [11, 21]
+		x: [12, 39],
+		y: [85, 130],
+		z: [11, 27]
 	}
 	num_boids = 150
 	let boid3 = await initialize_boids(regl, resources, num_boids, box3, size, max_speed);
