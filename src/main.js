@@ -101,7 +101,7 @@ async function main() {
 	/*---------------------------------------------------------------
 		Camera
 	---------------------------------------------------------------*/
-	let campos = [0, 0, 2]
+	let campos = [53, 78, 105]
 	const mat_turntable = mat4.create()
 	const cam_distance_base = 0.75
 
@@ -109,7 +109,7 @@ async function main() {
 	let cam_angle_y = 0 // in radians!
 	let cam_distance_factor = 1.
 
-	let cam_target = [0, 0, 0]
+	let cam_target = [180, 180, 70]
 
 	let cam_speed = 1
 
@@ -195,29 +195,33 @@ async function main() {
 		minMaxIntensity: [0.05, 0.9],
 		useFog: true,
 	}
-
-	fog_args.useFog = false;
+	
+	let fish_fog_intensity_factor = 0.7
+	const fish_fog = {
+		fog_color: fog_args.fog_color,
+		closeFarThreshold: fog_args.closeFarThreshold,
+		minMaxIntensity: vec2.scale([], fog_args.minMaxIntensity, fish_fog_intensity_factor),
+		useFog: fog_args.useFog,
+	}
 
 	
 	let terrain_width = 180
 	let terrain_height = 180
 	let terrain_depth = 96
 
+	let textures = []
+	let fbm = 2 // <1 -> Perlin, >1 -> FBM
+	for (let i = 0; i < terrain_depth; i++) {
+		let texture = init_noise(regl, resources, fbm)
+		let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
+		textures.push(tex)
+	}
+	let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
+	let terrain_actor = ter.terrain
+	let algae = ter.algae
 	
-	// let seed = 0
-	// let textures = []
-	// let fbm = 2 // <1 -> Perlin, >1 -> FBM
-	// for (let i = 0; i < terrain_depth; i++) {
-	// 	let texture = init_noise(regl, resources, fbm)
-	// 	let tex = texture.draw_texture_to_buffer({width: terrain_width, height: terrain_height, mouse_offset: [-10, -10], i: i})
-	// 	textures.push(tex)
-	// }
-	// let ter = init_terrain(regl, resources, textures, {x: 0, y: 0, z: 0})
-	// let terrain_actor = ter.terrain
-	// let algae = ter.algae
-
-
-	let num_boids = 100;
+	// initialize boids, framerate starts to lower when going over 300 total boids
+	let num_boids = 60;
 	let centre_pull_threshold = 5;
 	let avoidance_distance = 3.5;
 	let avoidance_factor = 2;
@@ -227,6 +231,37 @@ async function main() {
 	let boid = await initialize_boids(regl, resources, num_boids);
 	let boid_actors = boid.boids
 	let boids_list = boid.boids_list
+	let max_speed = 0.16
+	let size = [0.3, 0.5, 0.3]
+
+	let box1 = {
+		x: [124, 162],
+		y: [82, 118],
+		z: [10, 64]
+	}
+	let boid1 = await initialize_boids(regl, resources, num_boids, box1, size, max_speed);
+	let boid_actors1 = boid1.boids
+	let boids_list1 = boid1.boids_list
+
+	let box2 = {
+		x: [43, 63],
+		y: [93, 141],
+		z: [72, 89]
+	}
+	num_boids = 60
+	let boid2 = await initialize_boids(regl, resources, num_boids, box2, size, max_speed);
+	let boid_actors2 = boid2.boids
+	let boids_list2 = boid2.boids_list
+
+	let box3 = {
+		x: [15, 34],
+		y: [55, 128],
+		z: [11, 21]
+	}
+	num_boids = 150
+	let boid3 = await initialize_boids(regl, resources, num_boids, box3, size, max_speed);
+	let boid_actors3 = boid3.boids
+	let boids_list3 = boid3.boids_list
 
 
 	// const a = init_algae(regl, resources, [0, 0, 0])
@@ -235,9 +270,8 @@ async function main() {
 	/*
 		UI
 	*/
-	let dir = false
 	register_keyboard_action('l', () => {
-		dir = !dir
+		direction = !direction
 	})
 
 	register_keyboard_action('z', () => {
@@ -263,6 +297,7 @@ async function main() {
 
 	register_keyboard_action('f', () => { 
 		fog_args.useFog = !fog_args.useFog; 
+		fish_fog.useFog = !fish_fog.useFog;
 		update_needed = true; 
 	})
 
@@ -352,14 +387,17 @@ async function main() {
 		update_needed = true
 		if (close > far && closeChanged) {
 			fog_args.closeFarThreshold = [close, close]
+			fish_fog.closeFarThreshold = [close, close]
 			return [close, close, true]
 		}
 		else if (far < close && !closeChanged) {
 			fog_args.closeFarThreshold = [far, far]
+			fish_fog.closeFarThreshold = [far, far]
 			return [far, far, true]
 		}
 		else {
 			fog_args.closeFarThreshold = [close, far]
+			fish_fog.closeFarThreshold = [close, far]
 			return [close, far, false]
 		}
 	}
@@ -369,14 +407,17 @@ async function main() {
 		let ret;
 		if (min > max && minChanged) {
 			fog_args.minMaxIntensity = [min, min]
+			fish_fog.minMaxIntensity = [min * fish_fog_intensity_factor, min * fish_fog_intensity_factor]
 			return [min, min, true]
 		}
 		else if (max < min && !minChanged) {
 			fog_args.minMaxIntensity = [max, max]
+			fish_fog.minMaxIntensity = [max * fish_fog_intensity_factor, max * fish_fog_intensity_factor]
 			return [max, max, true]
 		}
 		else {
 			fog_args.minMaxIntensity = [min, max]
+			fish_fog.minMaxIntensity = [min * fish_fog_intensity_factor, max * fish_fog_intensity_factor]
 			return [min, max, false]
 		}
 	}
@@ -384,12 +425,12 @@ async function main() {
 	function change_fog_color(color) {
 		let rgb = hexToRgb(color)
 		fog_args.fog_color = [rgb.r, rgb.g, rgb.b]
+		fish_fog.fog_color = fog_args.fog_color
 	}
 
 	register_slider_with_dependency('slider-fog-close', 'slider-fog-far', change_fog_distance)
 	register_slider_with_dependency('slider-fog-min', 'slider-fog-max', change_fog_intensity)
 	register_color('color-fog', change_fog_color)
-
 
 
 	/*---------------------------------------------------------------
@@ -400,7 +441,6 @@ async function main() {
 	const cam_pos = vec3.create()
 
 	let light_position_world = [10, -10, -200, 1.0]
-	//let light_position_world = [1, -1, 1., 1.0]
 
 	const light_position_cam = [0, 0, 0, 0]
 
@@ -432,20 +472,31 @@ async function main() {
 			
 			vec3.copy(cam_pos, campos)
 
-			boids_list = boids_update(boids_list, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
-			for (let i = 0; i < boids_list.length; i++) {
-				boid_actors[i].draw(scene_info, cam_pos)
+			boids_list1 = boids_update(boids_list1, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list1.length; i++) {
+				boid_actors1[i].draw(scene_info, fish_fog, cam_pos)
+			}
+
+			boids_list2 = boids_update(boids_list2, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list2.length; i++) {
+				boid_actors2[i].draw(scene_info, fish_fog, cam_pos)
+			}
+
+			boids_list3 = boids_update(boids_list3, centre_pull_threshold, avoidance_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency)
+			for (let i = 0; i < boids_list3.length; i++) {
+				boid_actors3[i].draw(scene_info, fish_fog, cam_pos)
 			}
 			
 			
-			// terrain_actor.draw(scene_info, fog_args, cam_pos)
-			// for (let i = 0; i < algae.length; i++) {
-			// 	algae[i].draw(scene_info, fog_args, cam_pos)
-			// }
+			terrain_actor.draw(scene_info, fog_args, cam_pos)
+			for (let i = 0; i < algae.length; i++) {
+				algae[i].draw(scene_info, fog_args, cam_pos)
+			}
 			//a.draw(scene_info, fog_args, cam_pos)
 
-			if (dir) {
-				console.log(vec3.sub(vec3.create(), cam_target, campos))
+			if (direction) {
+				console.log(vec3.normalize([], vec3.sub(vec3.create(), cam_target, campos)))
+				console.log(cam_pos)
 			}
 		}
 		update_needed = true

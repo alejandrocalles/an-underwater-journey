@@ -2,7 +2,7 @@ import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/ind
 import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
 import {mat4_matmul_many} from "./icg_math.js"
 import { load_mesh } from "./icg_mesh.js";
-import {biased_random} from "./l-system.js"
+import {biased_random, random_between} from "./l-system.js"
 
  export function boids_update(boids_list, centre_pull_threshold, repel_distance, avoidance_factor, influence_distance, swarming_tendency, flocking_tendency) {
     for (let boid of boids_list) {
@@ -47,7 +47,7 @@ import {biased_random} from "./l-system.js"
     return boids_list;
 }
 
-export async function initialize_boids(regl, resources, num_boids) {
+export async function initialize_boids(regl, resources, num_boids, box, scale, max_speed) {
 
     class BoidActor {
         constructor(boid) {
@@ -58,7 +58,7 @@ export async function initialize_boids(regl, resources, num_boids) {
             this.mat_model_to_world = mat4.create()
         }
     
-        draw({mat_projection, mat_view, light_position_cam}, cam_pos) {
+        draw({mat_projection, mat_view, light_position_cam}, {fog_color, closeFarThreshold, minMaxIntensity, useFog}, cam_pos) {
             mat4_matmul_many(this.mat_model_view, mat_view, this.mat_model_to_world)
             mat4_matmul_many(this.mat_mvp, mat_projection, this.mat_model_view)
     
@@ -71,49 +71,68 @@ export async function initialize_boids(regl, resources, num_boids) {
                 normal: this.boid.normal,
                 faces: this.boid.faces,
 
-                mat_mvp: this.mat_mvp,
-                mat_model_view: this.mat_model_view,
-                mat_normals: this.mat_normals,
-        
-                light_position: light_position_cam,
+				mat_mvp: this.mat_mvp,
+				mat_model_view: this.mat_model_view,
+				mat_normals: this.mat_normals,
+		
+				light_position: light_position_cam,
+
+				cam_pos: cam_pos,
+
+				fog_color: fog_color,
+				closeFarThreshold: closeFarThreshold,
+				minMaxIntensity: minMaxIntensity,
+				useFog: useFog,
     
                 color: this.boid.colour,
-                cam_pos: cam_pos,
             })
         }
     }
 
-    let fish_mesh1 = await load_mesh("src/meshes/fish1.obj")
-    let fish_mesh2 = await load_mesh("src/meshes/fish2.obj")
-    let fish_mesh3 = await load_mesh("src/meshes/fish3.obj")
+    let fish_mesh1 = {vertices: [], normals: [], faces: []}
+    let fish_mesh2 = {vertices: [], normals: [], faces: []}
+    let fish_mesh3 = {vertices: [], normals: [], faces: []}
+
+    fish_mesh1 = await load_mesh("src/meshes/fish1.obj", scale)
+    fish_mesh2 = await load_mesh("src/meshes/fish2.obj", scale)
+    fish_mesh3 = await load_mesh("src/meshes/fish3.obj", scale)
+
 
     let boids_list = []
     let boids_actors = []
+
+    // we must add a margin so they have time to turn around and do not go too much out of bounds
+    let margin = 10
+    let scaled_box = {
+        x: [box.x[0] + margin, box.x[1] - margin],
+        y: [box.y[0] + margin, box.y[1] - margin],
+        z: [box.z[0] + margin, box.z[1] - margin],
+    }
     for(let i = 0; i < num_boids; i++){
-        let centre_x = Math.random()*2 - 1;
-        let centre_y = Math.random()*2 - 1;
-        let centre_z = Math.random()*2 - 1;
-        
+        let centre_x = random_between(box.x[0], box.x[1])
+        let centre_y = random_between(box.y[0], box.y[1])
+        let centre_z = random_between(box.z[0], box.z[1])
         let position = [centre_x, centre_y, centre_z];
         vec3.scale(position, position, 50);
-        let shape = [
-            [0, 0, 0],
-            [-1.5, 0.75, 0.75],
-            [-1.5, 0.75, -0.75],
-            [-1.5, -0.75, -0.75],
-            [-1.5, -0.75, 0.75]
-        ];
         let velocity = [Math.random()/2.5 + 0.01, Math.random()/2.5 + 0.01, Math.random()/2.5 + 0.01]
         let acceleration = [0,0,0];
         let maxSpeed = (0.4);
         let maxForce = 3;
 
-        let colour = [Math.random(), Math.random(), Math.random()];
+        let colour = [random_between(0.7, 1), random_between(0.1, 0.4), random_between(0.1, 0.2)];
+        if (Math.random() < 0.3) {
+            colour = [random_between(0.4, 0.5), random_between(0.4, 0.5), random_between(0.5, 0.7)];
+        }
+
         let fish_mesh
-        if (biased_random(0, 4, 3) < 1.5) fish_mesh = fish_mesh2
-        else fish_mesh = fish_mesh1
-        // vec3.random(colour, 1);
-        boids_list.push(new Boid(shape, position, velocity, acceleration, maxSpeed, maxForce, colour, i, fish_mesh3));
+        if (biased_random(0, 4, 2.5) < 2) {
+            fish_mesh = fish_mesh2
+        }
+        else {
+            fish_mesh = fish_mesh1
+        }
+
+        boids_list.push(new Boid(position, velocity, acceleration, maxSpeed, maxForce, colour, fish_mesh, scaled_box, i));
         boids_actors.push(new BoidActor(boids_list[i]))
     }
 
@@ -136,6 +155,11 @@ export async function initialize_boids(regl, resources, num_boids) {
 
 			cam_pos: regl.prop('cam_pos'),
 
+			fog_color: regl.prop('fog_color'),
+			closeFarThreshold: regl.prop('closeFarThreshold'),
+			minMaxIntensity: regl.prop('minMaxIntensity'),
+			useFog: regl.prop('useFog'),
+
 			color: regl.prop('color'),
 		},
 
@@ -153,18 +177,13 @@ export async function initialize_boids(regl, resources, num_boids) {
 
 
 export class Boid {
-    constructor(shape, position, velocity, acceleration, maxSpeed, maxForce, colour, id, mesh) {
+    constructor(position, velocity, acceleration, maxSpeed, maxForce, colour, mesh, box, id) {
         this.position = position;        	// vec3 or vec2
         this.velocity = velocity;        	// vec3 or vec2
         this.acceleration = acceleration;	// vec3 or vec2
         this.maxSpeed = maxSpeed;           // float
         this.maxForce = maxForce;           // float
-        this.perceptionRadius = 50;         // float (default value)
         this.colour = colour;               // vec3 (default colour: white)
-        this.size = 1;                      // float (default size)
-        this.separationWeight = 1.5;        // float
-        this.alignmentWeight = 1.0;         // float
-        this.cohesionWeight = 1.0;          // float
         this.mesh = mesh                    // dict {vertices, normals, faces}
 
         this.shape = mesh.vertices
@@ -173,7 +192,9 @@ export class Boid {
 
         // console.log(this.normal)
 
-        this.id = id
+        this.box = box                      // dict {x: [min, max], y:[min, max], z:[min, max]}
+
+        this.id = id                        // int for debugging
     }
   
     // Update position based on velocity
@@ -190,12 +211,12 @@ export class Boid {
 
             this.acceleration = [0.0, 0.0, 0];
             vec3.add(this.position, this.position, this.velocity)
-            if (this.position[0] > 50) this.acceleration[0] += (50 - this.position[0]) * 0.001;
-            if (this.position[0] < -50) this.acceleration[0] += (50 - this.position[0]) * 0.001;
-            if (this.position[1] > 50) this.acceleration[1] += (50 - this.position[1]) * 0.001
-            if (this.position[1] < -50) this.acceleration[1] += (50 - this.position[1]) * 0.001
-            if (this.position[2] > 50) this.acceleration[2] += (50 - this.position[2]) * 0.001
-            if (this.position[2] < -50) this.acceleration[2] += (50 - this.position[2]) * 0.001
+            if (this.position[0] > this.box.x[1]) this.acceleration[0] += (this.box.x[1] - this.position[0]) ** 3 * 0.001
+            if (this.position[0] < this.box.x[0]) this.acceleration[0] += (this.box.x[0] - this.position[0]) ** 3 * 0.001
+            if (this.position[1] > this.box.y[1]) this.acceleration[1] += (this.box.y[1] - this.position[1]) ** 3 * 0.001
+            if (this.position[1] < this.box.y[0]) this.acceleration[1] += (this.box.y[0] - this.position[1]) ** 3 * 0.001
+            if (this.position[2] > this.box.z[1]) this.acceleration[2] += (this.box.z[1] - this.position[2]) ** 3 * 0.001
+            if (this.position[2] < this.box.z[0]) this.acceleration[2] += (this.box.z[0] - this.position[2]) ** 3 * 0.001
 
             // let n_horiz = vec3.cross([], this.position, [0, 0, 1])
             let xy_angle = vec3.angle([1, 0, 0], vec3.normalize([], [this.velocity[0], this.velocity[1], 0]))
@@ -214,10 +235,11 @@ export class Boid {
                 let vert = vec3.copy([], this.mesh.vertices[i])
                 let v = vec4.transformMat4([], [vert[0], vert[1], vert[2], 1], transformation)
                 this.shape.push([v[0], v[1], v[2]])
-
+            }
+            for (let i = 0; i < this.mesh.normals; i++) {
                 let norm = vec3.copy([], this.mesh.normals[i])
                 let n = vec4.transformMat4([], [norm[0], norm[1], norm[2], 1], transformation)
-                this.normal.push(n[0], n[1], n[2])
+                this.normal.push([v[0], v[1], v[2]])
             }
 
             /*    
@@ -256,3 +278,11 @@ export class Boid {
     // Additional methods for behaviors (separation, alignment, cohesion) would go here
 }
 
+
+function clamp(v, minv, maxv) {
+    v[0] = Math.min(Math.max(v[0], minv), maxv)
+    v[1] = Math.min(Math.max(v[1], minv), maxv)
+    v[2] = Math.min(Math.max(v[2], minv), maxv)
+
+    return v
+}
