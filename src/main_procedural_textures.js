@@ -6,7 +6,7 @@ import {DOM_loaded_promise, load_text, register_button_with_hotkey, register_key
 
 import {init_ptextures} from "./ptextures.js"
 import {init_noise} from "./noise.js"
-import {bezier_curve, long_bezier_curve} from "./bezier.js"
+import {long_bezier_curve} from "./bezier.js"
 import {init_terrain} from "./terrain.js"
 
 import { hexToRgb } from "./utils.js"
