@@ -1,7 +1,7 @@
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
 import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
 import {mat4_matmul_many} from "./icg_math.js"
-import { icg_mesh_load_obj_cpu, load_mesh } from "./icg_mesh.js";
+import { load_mesh } from "./icg_mesh.js";
 import {biased_random, random_between} from "./l-system.js"
 
  export function boids_update(boids_list, centre_pull_threshold, repel_distance, repel_factor, influence_distance, swarming_tendency, flocking_tendency) {

@@ -226,10 +226,10 @@ async function main() {
 	let avoidance_distance = 5;
 	let avoidance_factor = 0.000003;
 	let influence_distance = 11;
-	let swarming_tendency = 0.04;
-	let flocking_tendency = 0.08;
+	let swarming_tendency = 0.05;
+	let flocking_tendency = 0.09;
 	let max_speed = 0.16
-	let size = 0.3
+	let size = [0.3, 0.5, 0.3]
 
 	let box1 = {
 		x: [124, 162],

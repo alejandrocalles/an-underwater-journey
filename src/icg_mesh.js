@@ -140,7 +140,7 @@ export async function icg_mesh_load_obj(regl_instance, url, material_colors_by_n
 }
 
 // understood the .obj file format thanks to https://all3dp.com/2/obj-file-format-simply-explained/
-export async function load_mesh(path, scale = 1.0){
+export async function load_mesh(path, scale = [1, 1, 1]){
 	let mesh = {
 		vertices: [],
 		normals: [],
@@ -157,8 +157,8 @@ export async function load_mesh(path, scale = 1.0){
 	for (const line of lines){
 		const parts = line.split(' ')
 		if (parts[0] === 'v'){
-			let v = [parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])]
-			vertices.push(vec3.scale([], v, scale))
+			let v = [parseFloat(parts[1]) * scale[0], parseFloat(parts[2]) * scale[1], parseFloat(parts[3]) * scale[2]]
+			vertices.push(v)
 			normals.push([])
 		}
 		else if (parts[0] === 'vn'){
@@ -170,6 +170,8 @@ export async function load_mesh(path, scale = 1.0){
 				const vertex = parts[i].split('/')
 				let v_index = parseInt(vertex[0]) - 1
 				face.push(v_index)
+
+				// average normals of the vertices
 				if (normals[v_index].length === 0){
 					normals[v_index] = tmp_normals[parseInt(vertex[2]) - 1]
 				} else {
@@ -188,43 +190,4 @@ export async function load_mesh(path, scale = 1.0){
 	mesh.faces = faces
 	
 	return mesh
-}
-
-
-// taken from GL3_Env_CubeMap slightly adapted
-export async function icg_mesh_load_obj_cpu(url, material_colors_by_name) {
-	const obj_data = await load_text(url)
-	console.log(obj_data)
-	const mesh_loaded_obj = new Mesh(obj_data)
-
-	const faces_from_materials = [].concat(...mesh_loaded_obj.indicesPerMaterial)
-	
-	let vertex_colors = null
-
-	if(material_colors_by_name) {
-		const material_colors_by_index = mesh_loaded_obj.materialNames.map((name) => {
-			let color = material_colors_by_name[name];
-			if (color === undefined) {
-				console.warn(`Missing color for material ${name} in mesh ${url}`);
-				color = [1., 0., 1.];
-			}
-			return color;
-		})
-
-		vertex_colors = [].concat(mesh_loaded_obj.vertexMaterialIndices.map((mat_idx) => material_colors_by_index[mat_idx]))
-		// vertex_colors = regl_instance.buffer(vertex_colors)
-	}
-	
-	return  {
-		name: url.split('/').pop(),
-		vertices: mesh_loaded_obj.vertices,
-		vertex_tex_coords: mesh_loaded_obj.textures,
-		normals: mesh_loaded_obj.vertexNormals,
-		vertex_colors: vertex_colors,
-		
-		// https://github.com/regl-project/regl/blob/master/API.md#elements
-		faces: faces_from_materials,
-		
-		lib_obj: mesh_loaded_obj,
-	}
 }
