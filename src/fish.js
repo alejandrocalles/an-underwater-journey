@@ -113,10 +113,8 @@ export async function initialize_boids(regl, resources, num_boids, box, scale, m
         let centre_y = random_between(box.y[0], box.y[1])
         let centre_z = random_between(box.z[0], box.z[1])
         let position = [centre_x, centre_y, centre_z];
-        vec3.scale(position, position, 50);
         let velocity = [Math.random()/2.5 + 0.01, Math.random()/2.5 + 0.01, Math.random()/2.5 + 0.01]
         let acceleration = [0,0,0];
-        let maxSpeed = (0.4);
         let maxForce = 3;
 
         let colour = [random_between(0.7, 1), random_between(0.1, 0.4), random_between(0.1, 0.2)];
@@ -132,7 +130,7 @@ export async function initialize_boids(regl, resources, num_boids, box, scale, m
             fish_mesh = fish_mesh1
         }
 
-        boids_list.push(new Boid(position, velocity, acceleration, maxSpeed, maxForce, colour, fish_mesh, scaled_box, i));
+        boids_list.push(new Boid(position, velocity, acceleration, max_speed, maxForce, colour, fish_mesh, scaled_box, i));
         boids_actors.push(new BoidActor(boids_list[i]))
     }
 
@@ -211,12 +209,12 @@ export class Boid {
 
             this.acceleration = [0.0, 0.0, 0];
             vec3.add(this.position, this.position, this.velocity)
-            if (this.position[0] > this.box.x[1]) this.acceleration[0] += (this.box.x[1] - this.position[0]) ** 3 * 0.001
-            if (this.position[0] < this.box.x[0]) this.acceleration[0] += (this.box.x[0] - this.position[0]) ** 3 * 0.001
-            if (this.position[1] > this.box.y[1]) this.acceleration[1] += (this.box.y[1] - this.position[1]) ** 3 * 0.001
-            if (this.position[1] < this.box.y[0]) this.acceleration[1] += (this.box.y[0] - this.position[1]) ** 3 * 0.001
-            if (this.position[2] > this.box.z[1]) this.acceleration[2] += (this.box.z[1] - this.position[2]) ** 3 * 0.001
-            if (this.position[2] < this.box.z[0]) this.acceleration[2] += (this.box.z[0] - this.position[2]) ** 3 * 0.001
+            if (this.position[0] > this.box.x[1]) this.acceleration[0] += (this.box.x[1] - this.position[0]) ** 3 * 0.01
+            if (this.position[0] < this.box.x[0]) this.acceleration[0] += (this.box.x[0] - this.position[0]) ** 3 * 0.01
+            if (this.position[1] > this.box.y[1]) this.acceleration[1] += (this.box.y[1] - this.position[1]) ** 3 * 0.01
+            if (this.position[1] < this.box.y[0]) this.acceleration[1] += (this.box.y[0] - this.position[1]) ** 3 * 0.01
+            if (this.position[2] > this.box.z[1]) this.acceleration[2] += (this.box.z[1] - this.position[2]) ** 3 * 0.01
+            if (this.position[2] < this.box.z[0]) this.acceleration[2] += (this.box.z[0] - this.position[2]) ** 3 * 0.01
 
             // let n_horiz = vec3.cross([], this.position, [0, 0, 1])
             let xy_angle = vec3.angle([1, 0, 0], vec3.normalize([], [this.velocity[0], this.velocity[1], 0]))

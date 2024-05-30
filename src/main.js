@@ -228,7 +228,7 @@ async function main() {
 	let influence_distance = 40;
 	let swarming_tendency = 1.4;
 	let flocking_tendency = 0.4;
-	let max_speed = 0.4
+	let max_speed = 0.2
 	let size = [0.3, 0.5, 0.3]
 
 	let box1 = {
