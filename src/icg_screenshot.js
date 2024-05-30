@@ -143,6 +143,7 @@ export class CanvasVideoRecording {
 		const elem_video = document.createElement('video');
 		elem_box.appendChild(elem_video);
 
+		console.log(this.video_data_url)
 		elem_video.src = this.video_data_url;
 		elem_video.width = 320;
 		elem_video.controls = true;

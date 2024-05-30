@@ -40,7 +40,7 @@ async function main() {
 
 	const regl = createREGL({ // the canvas to use
 		profile: true, // if we want to measure the size of buffers/textures in memory
-		extensions: ['oes_texture_float', "OES_element_index_uint"], // enable float textures
+		extensions: ['oes_texture_float', "OES_element_index_uint", "WEBGL_color_buffer_float"]
 	})
 
 	// The <canvas> (HTML element for drawing graphics) was created by REGL, lets take a handle to it.
@@ -58,12 +58,14 @@ async function main() {
 	function video_start_stop() {
 		if(video.is_recording()) {
 			video.stop();
+			document.getElementById('is-recording').innerText = "Not recording."
 		} else {
 			video.start();
+			document.getElementById('is-recording').innerText = "Recording."
 		}
 	};
 
-	register_keyboard_action('.', video_start_stop)
+	register_keyboard_action('m', video_start_stop)
 
 
 	let update_needed = true
@@ -530,7 +532,7 @@ async function main() {
 
 	const light_position_cam = [0, 0, 0, 0]
 
-	regl.frame(({tick, framebufferWidth, framebufferHeight}) => {
+	regl.frame(({tick, viewportWidth, viewportHeight}) => {
 		/*
 			Resize and clear framebuffer
 
@@ -538,11 +540,11 @@ async function main() {
 			regl will think it's still being used and will crash the process
 		*/
 		regl.clear({color: [0.0, 0.0, 0.0, 1.0], depth: 1, framebuffer: fbo})
-		fbo.resize(framebufferWidth, framebufferHeight)
+		fbo.resize(viewportWidth, viewportHeight)
 		if (automatic_camera) {
 			mat4.perspective(mat_projection,
 				deg_to_rad * 60, // fov y
-				framebufferWidth / framebufferHeight, // aspect ratio
+				viewportWidth / viewportHeight, // aspect ratio
 				0.01, // near
 				100, // far
 			)
@@ -561,7 +563,7 @@ async function main() {
 
 			mat4.perspective(mat_projection,
 				deg_to_rad * 60, // fov y
-				framebufferWidth / framebufferHeight, // aspect ratio
+				viewportWidth / viewportHeight, // aspect ratio
 				0.01, // near
 				300, // far
 			)
@@ -625,8 +627,8 @@ async function main() {
 		} else {
 			draw_fbo_to_screen()
 		}
-		video.push_frame()
 		update_needed = true
+		video.push_frame()
 
 // 		debug_text.textContent = `
 // Hello! Sim time is ${sim_time.toFixed(2)} s
