@@ -38,11 +38,32 @@ async function main() {
 
 	const regl = createREGL({ // the canvas to use
 		profile: true, // if we want to measure the size of buffers/textures in memory
-		extensions: ['oes_texture_float', "OES_element_index_uint"], // enable float textures
+		extensions: ['oes_texture_float', "OES_element_index_uint", "WEBGL_color_buffer_float"]
 	})
 
 	// The <canvas> (HTML element for drawing graphics) was created by REGL, lets take a handle to it.
 	const canvas_elem = document.getElementsByTagName('canvas')[0]
+
+	/*---------------------------------------------------------------
+		Video recording
+	---------------------------------------------------------------*/
+	const video = new CanvasVideoRecording({
+		canvas: canvas_elem,
+		// videoBitsPerSecond: 250*1024, // tweak that if the quality is bad 
+		// https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/MediaRecorder
+	});
+
+	function video_start_stop() {
+		if(video.is_recording()) {
+			video.stop();
+			document.getElementById('is-recording').innerText = "Not recording."
+		} else {
+			video.start();
+			document.getElementById('is-recording').innerText = "Recording."
+		}
+	};
+
+	register_keyboard_action('m', video_start_stop)
 
 
 	let update_needed = true
@@ -509,7 +530,7 @@ async function main() {
 
 	const light_position_cam = [0, 0, 0, 0]
 
-	regl.frame((frame) => {
+	regl.frame(({tick, viewportWidth, viewportHeight}) => {
 		/*
 			Resize and clear framebuffer
 
@@ -517,15 +538,15 @@ async function main() {
 			regl will think it's still being used and will crash the process
 		*/
 		regl.clear({color: [0.0, 0.0, 0.0, 1.0], depth: 1, framebuffer: fbo})
-		fbo.resize(frame.framebufferWidth, frame.framebufferHeight)
+		fbo.resize(viewportWidth, viewportHeight)
 		if (automatic_camera) {
 			mat4.perspective(mat_projection,
 				deg_to_rad * 60, // fov y
-				frame.framebufferWidth / frame.framebufferHeight, // aspect ratio
+				viewportWidth / viewportHeight, // aspect ratio
 				0.01, // near
 				100, // far
 			)
-			const time = 0.005 * (frame.tick % 200)
+			const time = 0.005 * (tick % 200)
 			const {bezier_view, camera_position} = long_bezier_curve(
 				PRESET_PATHS[0],
 				time,
@@ -540,7 +561,7 @@ async function main() {
 
 			mat4.perspective(mat_projection,
 				deg_to_rad * 60, // fov y
-				frame.framebufferWidth / frame.framebufferHeight, // aspect ratio
+				viewportWidth / viewportHeight, // aspect ratio
 				0.01, // near
 				300, // far
 			)
@@ -552,7 +573,7 @@ async function main() {
 			vec3.copy(cam_pos, campos)
 		}
 		// Draw cellular texture to buffer
-		texture_cel.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5, time : frame.tick * 0.02})
+		texture_cel.draw_texture_to_buffer({mouse_offset: [-0.5, -0.5], zoom_factor: 0.5, time : tick * 0.02})
 		// Update texture 'object'
 		water_texture({
 			width: texture_buffer.width,
@@ -605,6 +626,7 @@ async function main() {
 			draw_fbo_to_screen()
 		}
 		update_needed = true
+		video.push_frame()
 
 // 		debug_text.textContent = `
 // Hello! Sim time is ${sim_time.toFixed(2)} s

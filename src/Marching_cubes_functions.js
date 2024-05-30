@@ -17,7 +17,7 @@ export function vertex_interpolate(isovalue, p1, p2, v1, v2) {
 }
 
 
-export function compute_cube(cube, roof_level) {
+export function compute_cube(cube) {
     let cubeindex = 0
     let vert_list = []
     let triangles = []
@@ -85,44 +85,4 @@ export function compute_cube(cube, roof_level) {
     }
 
     return {triangles: triangles, vertices: vert_list, success: true}
-}
-export function index_to_v_index(index, gx, gy, gz, width, height) {
-    let v_index = 0
-    if (index == 0) {
-        v_index = (gx + gy * width + gz * height * width) * 3
-    }
-    if (index == 1) {
-        v_index = (gx + 1 + gy * width + gz * height * width) * 3 + 1
-    }
-    if (index == 2) {
-        v_index = (gx + (gy + 1) * width + gz * height * width) * 3
-    }
-    if (index == 3) {
-        v_index = (gx + gy * width + gz * height * width) * 3 + 1
-    }
-    if (index == 4) {
-        v_index = (gx + gy * width + (gz + 1) * height * width) * 3
-    }
-    if (index == 5) {
-        v_index = (gx + 1 + gy * width + (gz + 1) * height * width) * 3 + 1
-    }
-    if (index == 6) {
-        v_index = (gx + (gy + 1) * width + (gz + 1) * height * width) * 3
-    }
-    if (index == 7) {
-        v_index = (gx + gy * width + (gz + 1) * height * width) * 3 + 1
-    }
-    if (index == 8) {
-        v_index = (gx + gy * width + gz * height * width) * 3 + 2
-    }
-    if (index == 9) {
-        v_index = (gx + 1 + gy * width + gz * height * width) * 3 + 2
-    }
-    if (index == 10) {
-        v_index = (gx + 1 + (gy + 1) * width + gz * height * width) * 3 + 2
-    }
-    if (index == 11) {
-        v_index = (gx + (gy + 1) * width + gz * height * width) * 3 + 2
-    }
-    return v_index
 }

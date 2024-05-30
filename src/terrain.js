@@ -1,7 +1,7 @@
 import {vec2, vec3, vec4, mat2, mat3, mat4} from "../lib/gl-matrix_3.3.0/esm/index.js"
 import { cross, floor, forEach } from "../lib/gl-matrix_3.3.0/esm/vec3.js"
 import {mat4_matmul_many} from "./icg_math.js"
-import {compute_cube, index_to_v_index, vertex_interpolate} from "./Marching_cubes_functions.js"
+import {compute_cube} from "./Marching_cubes_functions.js"
 import { triTable, edge_table } from "./marching_cubes_tables.js"
 import { random_between } from "./l-system.js"
 import { init_algae } from "./algae.js"
@@ -33,12 +33,9 @@ class BufferData {
 		z = Math.min(Math.max(z, 0), this.depth - 1)
 		
 		return this.data[z][(x + y*this.width)<<2] * this.scale
-		//return this.data[(x + y*this.width + z*this.width*this.height)<<2] * this.scale
 	}
 }
 
-
-//TODO make sure noise function returns value between [-1, 1]
 function edge_table_index(cube) {
 	let cubeindex = 0;
 	if (cube[0] < 0) cubeindex |= 1
@@ -156,7 +153,7 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 			}
 		}
 	}*/
-
+	
 
 	// marching cubes based on https://www.cs.montana.edu/courses/spring2005/525/students/Hunt1.pdf
 	// and https://paulbourke.net/geometry/polygonise/
@@ -254,7 +251,6 @@ function terrain_build_mesh(height_map, regl, resources, offset={x: 0, y: 0, z: 
 			}
 		}
 	}
-	
 
 	/*
 	// create a flat surface of water

@@ -138,8 +138,6 @@ export async function icg_mesh_load_obj(regl_instance, url, material_colors_by_n
 
 	return [mesh_with_our_names, mesh_loaded_obj];
 }
-
-// understood the .obj file format thanks to https://all3dp.com/2/obj-file-format-simply-explained/
 export async function load_mesh(path, scale = [1, 1, 1]){
 	let mesh = {
 		vertices: [],

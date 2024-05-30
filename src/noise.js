@@ -60,7 +60,6 @@ export function init_noise(regl, resources, fbm=0, seed_inp=135299032) {
 
 	function seed(s) {
 		if(s > 0 && s < 1) {
-		  // Scale the seed out
 		  s *= 65536;
 		}
 	

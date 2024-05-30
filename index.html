@@ -10,6 +10,7 @@
 	<meta name="author" content="Krzysztof Lis">
 
 	<link rel="stylesheet" href="style.css">
+	<link rel="shortcut icon" href="#">
 </head>
 <body>
 
@@ -27,6 +28,7 @@
 		⁙⁙ toggle posterization <strong class="keyboard">p</strong>
 		⁙⁙ toggle camera path <strong class="keyboard">b</strong>
 		⁙⁙ toggle look at origin during camera path <strong class="keyboard">c</strong>
+		⁙⁙ start/stop recording <strong class="keyboard">m</strong>
 	</p>
 	<p id="view-options">
 		<span id="btn-preset-view" class="button">Preset view <strong class="keyboard">1</strong></span>
@@ -48,8 +50,11 @@
 		<input type="range" id="posterization-levels" min="10.0" max="100.0" step="2.0" value = "30.0" class="slider"></input>
 		100
 	</p>
-	
+	<p className="element" id="is-recording">
+		Not recording.
+	</p>
 	<pre id="debug-text"></pre>
+	<div id="video-container"></div>
 </div>
 
 </body>

@@ -356,16 +356,10 @@ vec3 gradP(int index) {
 	float x = float(index) / 512.0;
 	return texture2D(gradPSampler, vec2(x, 0.5)).rgb;
 }
-
 float perm(int index) {
 	float x = float(index) / 512.0;
 	return texture2D(permSampler, vec2(x, 0.5)).a * 255.0;
 }
-
-float F2 = 0.5 * (sqrt(3.) - 1.);
-float G2 = (3. - sqrt(3.)) / 6.;
-float F3 = 1. / 3.;
-float G3 = 1. / 6.;
 
 float pedro(vec3 point) {
 	vec3 P = floor(point);
